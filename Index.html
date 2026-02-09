@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+      /* ... (CSS ส่วนเดิมทั้งหมด ไม่ต้องแก้) ... */
+      :root {
+        --bg-color: #050505; --card-bg: #121212;
+        --primary-purple: #7F00FF; --neon-purple: #b042ff;
+        --text-color: #ffffff; --text-secondary: #a0a0a0;
+        --input-bg: #1e1e1e; --success: #00ff9d; --danger: #ff4d4d;
+      }
+      body { background-color: var(--bg-color); color: var(--text-color); font-family: 'Outfit', sans-serif; padding: 20px; display: flex; justify-content: center; min-height: 100vh; margin:0;}
+      .container { width: 100%; max-width: 900px; padding-bottom: 50px; }
+      .header h1 { background: linear-gradient(90deg, #fff, var(--neon-purple)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0; text-align: center; }
+      .input-zone, .bulk-form { background: var(--card-bg); padding: 20px; border-radius: 16px; border: 1px solid #333; margin-bottom: 20px; }
+      .input-row { display: flex; gap: 10px; } 
+      input, select, textarea { width: 100%; background: var(--input-bg); border: 1px solid #444; color: white; padding: 12px; border-radius: 8px; box-sizing:border-box; }
+      input[type="date"] { color-scheme: dark; }
+      .category-select { width: 30%; border-color: var(--neon-purple); }
+      .btn-add { background: var(--primary-purple); border: none; color: white; padding: 0 20px; border-radius: 8px; cursor: pointer; font-weight: bold; white-space: nowrap; }
+      .btn-apply { width: 100%; background: #222; border: 1px solid var(--neon-purple); color: var(--neon-purple); padding: 12px; margin-top: 15px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+      .btn-apply:hover { background: var(--neon-purple); color: white; }
+      .btn-create-job { width: 100%; margin-top: 20px; background: linear-gradient(135deg, var(--primary-purple), #5e00bd); color: white; padding: 16px; border-radius: 12px; font-size: 1.2rem; font-weight: bold; border: none; cursor: pointer; }
+      .btn-create-job:disabled { background: #555; cursor: not-allowed; opacity: 0.6; }
+      .defect-item { background: #1a1a1a; padding: 15px; border-radius: 10px; display: flex; align-items: center; gap: 15px; border: 1px solid #333; margin-bottom:10px; }
+      .defect-item.ready { border-left: 4px solid var(--success); }
+      .badge-category { font-size: 0.75rem; background: var(--primary-purple); color: white; padding: 2px 8px; border-radius: 4px; margin-left: 8px; text-transform:uppercase; }
+      .checkbox-custom { width: 20px; height: 20px; accent-color: var(--neon-purple); cursor:pointer; }
+      .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; } 
+      .full-width { grid-column: span 2; }
+      .field-label { font-size: 0.85rem; color: var(--text-secondary); display:block; margin-bottom:4px; font-weight:500;}
+      .hidden { display: none; }
+      .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); backdrop-filter: blur(5px); align-items: center; justify-content: center; }
+      .modal-content { background: var(--card-bg); border: 1px solid var(--neon-purple); border-radius: 16px; padding: 25px; width: 95%; max-width: 1000px; max-height: 90vh; display: flex; flex-direction: column; }
+      .table-wrapper { overflow-x: auto; margin-bottom: 20px; border: 1px solid #333; border-radius: 8px; }
+      table { width: 100%; border-collapse: collapse; min-width: 800px; } 
+      th { text-align: left; background: #222; color: var(--neon-purple); padding:10px; font-size:0.9rem; } 
+      td { padding:8px; border-bottom:1px solid #333; }
+      .tbl-input { background: transparent; border: 1px solid transparent; color: #ddd; padding: 5px; width:100%; font-family: inherit; } 
+      .tbl-input:focus { border: 1px solid var(--neon-purple); background:#111; }
+      .btn-del { color: var(--danger); background:none; border:none; cursor:pointer; }
+      #onsiteSection { animation: fadeIn 0.5s; }
+      @keyframes fadeIn { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+      .job-card { background: #151515; border: 1px solid #333; border-radius: 12px; padding: 20px; margin-bottom: 20px; position: relative; }
+      .job-card::before { content:''; position:absolute; top:0; left:0; width:4px; height:100%; background: var(--neon-purple); }
+      .job-id { font-size:1.2rem; font-weight:bold; color:white; }
+      .job-defect { background: rgba(127, 0, 255, 0.1); padding: 10px; border-radius: 8px; color: #ddd; margin:10px 0; }
+      .upload-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+      .upload-btn { background: #222; border: 1px dashed #555; border-radius: 8px; padding: 15px; text-align: center; cursor: pointer; position: relative; transition:0.2s; }
+      .upload-btn:hover { border-color: var(--neon-purple); background: #2a2a2a; }
+      .upload-status { position:absolute; top:5px; right:5px; font-size:12px; }
+      .status-done { color: var(--success); }
+    </style>
+  </head>
+  <body>
+
+    <div class="container">
+      <div class="header" id="mainHeader"><h1>BATCH WORK ORDER</h1></div>
+
+      <div id="creationSection">
+        <div class="input-zone">
+          <label class="field-label">1. Add Defect Details & Category</label>
+          <div class="input-row">
+            <select id="newCategory" class="category-select">
+               <option value="Electrical">Electrical</option>
+               <option value="Plumbing">Plumbing</option>
+               <option value="Structural">Structural</option>
+               <option value="Finishing">Finishing</option>
+               <option value="Other">Other</option>
+            </select>
+            <input type="text" id="newDefectInput" placeholder="Type detail..." onkeypress="handleEnter(event)">
+            <button class="btn-add" onclick="addDefect()">+ ADD</button>
+          </div>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; color:#888; margin-bottom:5px; font-size:0.9rem;">
+          <label><input type="checkbox" onchange="toggleSelectAll(this)"> Select All</label>
+          <span id="countDisplay">0 items</span>
+        </div>
+        <div id="defectListContainer" style="margin-bottom:20px;"></div>
+
+        <div class="bulk-form">
+          <div style="color:var(--neon-purple); font-weight:bold; margin-bottom:15px; text-transform:uppercase;">2. Select Items Above & Apply Info</div>
+          <div class="form-grid">
+            <div class="field-group"><label class="field-label">Site Name</label><input type="text" id="site"></div>
+            <div class="field-group"><label class="field-label">Building</label><input type="text" id="building"></div>
+            <div class="field-group"><label class="field-label">Floor</label><input type="text" id="floor"></div>
+            <div class="field-group"><label class="field-label">Unit</label><input type="text" id="unit"></div>
+            
+            <div class="full-width field-group">
+              <label class="field-label">Scope</label>
+              <select id="scope" onchange="toggleSupplier()"><option value="In Scope">In Scope</option><option value="Supplier">Supplier</option><option value="Out of Scope">Out of Scope</option></select>
+            </div>
+            <div class="full-width field-group hidden" id="supplierBox"><label class="field-label" style="color:var(--danger)">Supplier Name</label><input type="text" id="supplier"></div>
+            
+            <div class="full-width field-group"><label class="field-label">Responsible</label><input type="text" id="responsible"></div>
+            <div class="full-width field-group"><label class="field-label">End User</label><input type="text" id="endUser"></div>
+            <div class="full-width field-group"><label class="field-label">Owner</label><input type="text" id="owner"></div>
+            
+            <div class="field-group"><label class="field-label">Onsite Date</label><input type="date" id="onsiteDate" onchange="calcDue()" style="cursor:pointer;"></div>
+            <div class="field-group"><label class="field-label">Due Date (+14)</label><input type="date" id="dueDate" readonly style="background:#2a2a2a; color:#888;"></div>
+            <div class="full-width field-group"><label class="field-label">Remark</label><textarea id="remark" rows="1"></textarea></div>
+          </div>
+          <button class="btn-apply" onclick="applyDataToSelected()">APPLY INFO</button>
+        </div>
+
+        <button id="createJobBtn" class="btn-create-job" onclick="openReviewModal()" disabled>REVIEW & CREATE JOBS</button>
+      </div>
+
+      <div id="onsiteSection" class="hidden">
+        <div style="text-align:center; margin-bottom:20px;">
+          <h2 style="color:var(--success); margin:0;">JOBS CREATED!</h2>
+          <p style="color:#aaa;">Upload photos for the jobs below.</p>
+        </div>
+        <div id="jobCardsContainer"></div>
+        <button onclick="window.location.reload()" style="width:100%; padding:15px; background:var(--success); border:none; border-radius:10px; font-weight:bold; cursor:pointer;">FINISH & NEW BATCH</button>
+      </div>
+
+    </div>
+
+    <div id="reviewModal" class="modal">
+      <div class="modal-content">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+           <h3 style="color:white; margin:0;">Review Data</h3>
+           <span style="color:#aaa; font-size:0.8rem;">Edit directly in table</span>
+        </div>
+        <div class="table-wrapper">
+          <table id="reviewTable">
+            <thead><tr><th>#</th><th>Defect</th><th>Cat</th><th>Site</th><th>Unit</th><th>Scope</th><th>Date</th><th>Del</th></tr></thead>
+            <tbody id="reviewTableBody"></tbody>
+          </table>
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:10px;">
+          <button onclick="closeReviewModal()" style="background:#333; color:white; border:none; padding:10px 20px; border-radius:8px; cursor:pointer;">Back</button>
+          <button id="btnFinalConfirm" onclick="finalSubmit()" style="background:var(--success); color:black; border:none; padding:10px 20px; border-radius:8px; font-weight:bold; cursor:pointer;">CONFIRM & SAVE</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let defectItems = [];
+
+      function handleEnter(e) { if (e.key === 'Enter') addDefect(); }
+
+      function addDefect() {
+        const input = document.getElementById('newDefectInput');
+        const cat = document.getElementById('newCategory').value;
+        const text = input.value.trim();
+        if(!text) return;
+
+        defectItems.push({ id: Date.now(), text: text, category: cat, selected: true, data: null });
+        input.value = '';
+        renderList();
+        input.focus();
+      }
+
+      function renderList() {
+        const container = document.getElementById('defectListContainer');
+        const btn = document.getElementById('createJobBtn');
+        const countDisplay = document.getElementById('countDisplay');
+        container.innerHTML = '';
+
+        if(defectItems.length === 0) {
+           container.innerHTML = '<div style="text-align:center; color:#555; padding:20px;">No items.</div>';
+           btn.disabled=true; countDisplay.innerText="0 items"; return;
+        }
+
+        defectItems.forEach((item, i) => {
+          const div = document.createElement('div');
+          div.className = `defect-item ${item.data?'ready':''}`;
+          div.innerHTML = `
+            <input type="checkbox" class="checkbox-custom" ${item.selected?'checked':''} onchange="toggleSelect(${item.id})">
+            <div style="flex-grow:1; margin-left:10px;">
+              <div style="font-weight:600;">${i+1}. ${item.text} <span class="badge-category">${item.category}</span></div>
+              ${item.data ? `<div style="font-size:0.8rem; color:#888;">${item.data.site} / ${item.data.unit}</div>` : ''}
+            </div>
+            <span class="material-icons btn-del" onclick="removeItem(${item.id})">close</span>
+          `;
+          container.appendChild(div);
+        });
+
+        const readyCount = defectItems.filter(i=>i.data).length;
+        btn.innerText = `REVIEW & CREATE (${readyCount})`;
+        btn.disabled = readyCount === 0;
+        countDisplay.innerText = `${defectItems.length} items`;
+      }
+
+      function toggleSelect(id) { const i=defectItems.find(x=>x.id===id); if(i) i.selected=!i.selected; }
+      function toggleSelectAll(cb) { defectItems.forEach(i=>i.selected=cb.checked); renderList(); }
+      function removeItem(id) { defectItems=defectItems.filter(x=>x.id!==id); renderList(); }
+      function calcDue() { const d=new Date(document.getElementById('onsiteDate').value); d.setDate(d.getDate()+14); document.getElementById('dueDate').value=d.toISOString().split('T')[0]; }
+      function toggleSupplier() { document.getElementById('supplierBox').style.display = document.getElementById('scope').value==='Supplier'?'block':'none'; }
+
+      function applyDataToSelected() {
+        const site = document.getElementById('site').value;
+        const unit = document.getElementById('unit').value;
+        const onsite = document.getElementById('onsiteDate').value;
+        
+        if(!site || !unit || !onsite) { alert("Please enter Site, Unit & Onsite Date"); return; }
+        
+        const common = {
+           site, unit, onsiteDate: onsite,
+           building: document.getElementById('building').value,
+           floor: document.getElementById('floor').value,
+           scope: document.getElementById('scope').value,
+           supplier: document.getElementById('supplier').value,
+           responsible: document.getElementById('responsible').value,
+           endUser: document.getElementById('endUser').value,
+           owner: document.getElementById('owner').value,
+           dueDate: document.getElementById('dueDate').value,
+           remark: document.getElementById('remark').value
+        };
+
+        let count = 0;
+        defectItems.forEach(i => {
+           if(i.selected) {
+             i.data = { ...common, defectDetail: i.text, defectCategory: i.category };
+             i.selected = false;
+             count++;
+           }
+        });
+        if(count === 0) alert("Select items first!");
+        renderList();
+      }
+
+      // --- Review Modal ---
+      function openReviewModal() {
+        const ready = defectItems.filter(i=>i.data);
+        if(ready.length===0) return;
+        const tbody = document.getElementById('reviewTableBody'); tbody.innerHTML='';
+        
+        ready.forEach((item, idx) => {
+           const row = document.createElement('tr');
+           row.innerHTML = `
+             <td style="color:#888">${idx+1}</td>
+             <td><input class="tbl-input" value="${item.data.defectDetail}" onchange="upd(${item.id}, 'defectDetail', this.value)"></td>
+             <td>
+               <select class="tbl-input" onchange="upd(${item.id}, 'defectCategory', this.value)">
+                 <option value="Electrical" ${item.data.defectCategory==='Electrical'?'selected':''}>Elec</option>
+                 <option value="Plumbing" ${item.data.defectCategory==='Plumbing'?'selected':''}>Plumb</option>
+                 <option value="Structural" ${item.data.defectCategory==='Structural'?'selected':''}>Struct</option>
+                 <option value="Finishing" ${item.data.defectCategory==='Finishing'?'selected':''}>Finish</option>
+                 <option value="Other" ${item.data.defectCategory==='Other'?'selected':''}>Other</option>
+               </select>
+             </td>
+             <td><input class="tbl-input" value="${item.data.site}" onchange="upd(${item.id}, 'site', this.value)"></td>
+             <td><input class="tbl-input" value="${item.data.unit}" onchange="upd(${item.id}, 'unit', this.value)"></td>
+             <td><input class="tbl-input" value="${item.data.scope}" onchange="upd(${item.id}, 'scope', this.value)"></td>
+             <td><input type="date" class="tbl-input" value="${item.data.onsiteDate}" onchange="upd(${item.id}, 'onsiteDate', this.value)"></td>
+             <td style="text-align:center"><button class="btn-del" onclick="remReview(${item.id})">✖</button></td>
+           `;
+           tbody.appendChild(row);
+        });
+        document.getElementById('reviewModal').style.display='flex';
+      }
+
+      function upd(id, field, val) {
+        const item = defectItems.find(i=>i.id===id);
+        if(item && item.data) {
+           item.data[field] = val;
+           if(field==='defectDetail') item.text=val;
+           if(field==='defectCategory') item.category=val;
+        }
+      }
+      function remReview(id) { removeItem(id); openReviewModal(); if(defectItems.filter(i=>i.data).length===0) closeReviewModal(); }
+      function closeReviewModal() { document.getElementById('reviewModal').style.display='none'; renderList(); }
+
+      // --- Submit & On-Site ---
+      function finalSubmit() {
+        const ready = defectItems.filter(i=>i.data).map(i=>i.data);
+        const btn = document.getElementById('btnFinalConfirm');
+        btn.innerText = "SAVING..."; btn.disabled=true;
+
+        google.script.run.withSuccessHandler(res => {
+           if(res.success) {
+             closeReviewModal();
+             setupOnSiteView(res.jobs);
+           } else {
+             alert("Error: " + res.error);
+             btn.disabled=false; btn.innerText="CONFIRM & SAVE";
+           }
+        }).submitBatchData(ready);
+      }
+
+      function setupOnSiteView(jobs) {
+        document.getElementById('creationSection').classList.add('hidden');
+        document.getElementById('onsiteSection').classList.remove('hidden');
+        document.getElementById('mainHeader').innerHTML = "<h1>ON-SITE OPERATION</h1>";
+        const container = document.getElementById('jobCardsContainer');
+        container.innerHTML = "";
+
+        jobs.forEach(job => {
+          const div = document.createElement('div');
+          div.className = "job-card";
+          div.innerHTML = `
+            <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+              <div><div class="job-id">${job.id}</div><div style="color:#888; font-size:0.9rem;">${job.site} / Unit: ${job.unit}</div></div>
+            </div>
+            <div class="job-defect">Problem: ${job.defect}</div>
+            <div class="upload-grid">
+               ${renderBtn(job.id, 'unit', 'Unit Photo')}
+               ${renderBtn(job.id, 'before', 'Before')}
+               ${renderBtn(job.id, 'during', 'During')}
+               ${renderBtn(job.id, 'after', 'After')}
+            </div>
+          `;
+          container.appendChild(div);
+        });
+      }
+
+      function renderBtn(id, type, label) {
+        return `
+          <div class="upload-btn" onclick="document.getElementById('f-${id}-${type}').click()" id="btn-${id}-${type}">
+             <div class="upload-status" id="s-${id}-${type}"></div>
+             <span class="material-icons" style="font-size:24px; color:var(--neon-purple);">photo_camera</span>
+             <div style="font-size:0.8rem; color:#aaa; margin-top:5px;">${label}</div>
+             <input type="file" style="display:none" id="f-${id}-${type}" accept="image/*" onchange="upload(this, '${id}', '${type}')">
+          </div>
+        `;
+      }
+
+      function upload(input, id, type) {
+        if(input.files && input.files[0]) {
+           const file = input.files[0];
+           const reader = new FileReader();
+           const status = document.getElementById(`s-${id}-${type}`);
+           status.innerHTML = '⏳';
+           
+           reader.onload = function(e) {
+              const base64 = e.target.result.split(',')[1];
+              google.script.run.withSuccessHandler(res => {
+                 if(res.success) {
+                    status.innerHTML = '✅';
+                    document.getElementById(`btn-${id}-${type}`).style.borderColor = "var(--success)";
+                 } else { 
+                     // *** แก้ไขตรงนี้ครับ ให้แสดง Error จริง ***
+                     alert("Upload Failed: " + res.error); 
+                     status.innerHTML='❌'; 
+                 }
+              }).uploadImage({ base64: base64, mimeType: file.type, fileName: id+"_"+type, jobId: id, imgType: type });
+           };
+           reader.readAsDataURL(file);
+        }
+      }
+    </script>
+  </body>
+</html>
