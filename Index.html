@@ -53,6 +53,25 @@
       .upload-btn:hover { border-color: var(--neon-purple); background: #2a2a2a; }
       .upload-status { position:absolute; top:5px; right:5px; font-size:12px; }
       .status-done { color: var(--success); }
+      .dashboard { background: var(--card-bg); border: 1px solid #333; border-radius: 18px; padding: 24px; margin-bottom: 20px; }
+      .dashboard-header { display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px; gap: 15px; flex-wrap: wrap; }
+      .dashboard-title { font-size: 1.4rem; font-weight: 600; }
+      .status-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 20px; }
+      .status-card { background: #151515; border: 1px solid #2a2a2a; border-radius: 12px; padding: 14px; }
+      .status-card h4 { margin: 0 0 6px; font-size: 0.9rem; color: #aaa; text-transform: uppercase; letter-spacing: 0.04em; }
+      .status-count { font-size: 1.6rem; font-weight: 600; }
+      .status-badge { display:inline-flex; align-items:center; gap:6px; font-size:0.8rem; padding: 4px 10px; border-radius: 999px; border: 1px solid transparent; }
+      .badge-pending { color: #ffd966; border-color: #ffd96633; background: #ffd9661a; }
+      .badge-progress { color: #5ec8ff; border-color: #5ec8ff33; background: #5ec8ff1a; }
+      .badge-done { color: var(--success); border-color: #00ff9d33; background: #00ff9d1a; }
+      .badge-hold { color: var(--danger); border-color: #ff4d4d33; background: #ff4d4d1a; }
+      .workorder-list { display:flex; flex-direction:column; gap: 12px; }
+      .workorder-card { background: #111; border: 1px solid #2a2a2a; border-radius: 12px; padding: 16px; display:flex; justify-content:space-between; gap: 12px; flex-wrap: wrap; }
+      .workorder-meta { color: #9a9a9a; font-size: 0.85rem; }
+      .workorder-title { font-weight: 600; font-size: 1.05rem; margin-bottom: 6px; }
+      .dashboard-actions { display:flex; gap: 10px; flex-wrap: wrap; }
+      .btn-dashboard { background: var(--primary-purple); border: none; color: white; padding: 10px 16px; border-radius: 10px; cursor: pointer; font-weight: 600; }
+      .btn-dashboard.secondary { background: #222; border: 1px solid #444; color: #ddd; }
     </style>
   </head>
   <body>
@@ -60,7 +79,22 @@
     <div class="container">
       <div class="header" id="mainHeader"><h1>BATCH WORK ORDER</h1></div>
 
-      <div id="creationSection">
+      <div id="dashboardSection" class="dashboard">
+        <div class="dashboard-header">
+          <div>
+            <div class="dashboard-title">WORK ORDER DASHBOARD</div>
+            <div style="color:#888; font-size:0.9rem;">ภาพรวมสถานะใบงานทั้งหมดก่อนเข้าหน้า BATCH WORK ORDER</div>
+          </div>
+          <div class="dashboard-actions">
+            <button class="btn-dashboard secondary" onclick="refreshDashboard()">รีเฟรชข้อมูล</button>
+            <button class="btn-dashboard" onclick="goToBatchWorkOrder()">เข้าสู่หน้า BATCH WORK ORDER</button>
+          </div>
+        </div>
+        <div class="status-grid" id="statusGrid"></div>
+        <div class="workorder-list" id="workOrderList"></div>
+      </div>
+
+      <div id="creationSection" class="hidden">
         <div class="input-zone">
           <label class="field-label">1. Add Defect Details & Category</label>
           <div class="input-row">
@@ -142,6 +176,12 @@
 
     <script>
       let defectItems = [];
+      const dashboardItems = [
+        { id: "WO-240901", site: "SAS Tower", unit: "A-1203", owner: "QA Team", status: "Pending", dueDate: "2024-09-18" },
+        { id: "WO-240902", site: "SAS Tower", unit: "B-0812", owner: "MEP Team", status: "In Progress", dueDate: "2024-09-12" },
+        { id: "WO-240903", site: "SAS Tower", unit: "C-1005", owner: "Civil Team", status: "Completed", dueDate: "2024-09-05" },
+        { id: "WO-240904", site: "SAS Tower", unit: "D-0407", owner: "QA Team", status: "On Hold", dueDate: "2024-09-20" }
+      ];
 
       function handleEnter(e) { if (e.key === 'Enter') addDefect(); }
 
@@ -345,6 +385,64 @@
            reader.readAsDataURL(file);
         }
       }
+
+      function renderDashboard() {
+        document.getElementById('mainHeader').innerHTML = "<h1>WORK ORDER DASHBOARD</h1>";
+        const statusGrid = document.getElementById('statusGrid');
+        const list = document.getElementById('workOrderList');
+        const summary = dashboardItems.reduce((acc, item) => {
+          acc[item.status] = (acc[item.status] || 0) + 1;
+          return acc;
+        }, {});
+
+        statusGrid.innerHTML = `
+          <div class="status-card">
+            <h4>Pending</h4>
+            <div class="status-count">${summary["Pending"] || 0}</div>
+          </div>
+          <div class="status-card">
+            <h4>In Progress</h4>
+            <div class="status-count">${summary["In Progress"] || 0}</div>
+          </div>
+          <div class="status-card">
+            <h4>Completed</h4>
+            <div class="status-count">${summary["Completed"] || 0}</div>
+          </div>
+          <div class="status-card">
+            <h4>On Hold</h4>
+            <div class="status-count">${summary["On Hold"] || 0}</div>
+          </div>
+        `;
+
+        list.innerHTML = dashboardItems.map(item => `
+          <div class="workorder-card">
+            <div>
+              <div class="workorder-title">${item.id} • ${item.site} / Unit ${item.unit}</div>
+              <div class="workorder-meta">Owner: ${item.owner} • Due: ${item.dueDate}</div>
+            </div>
+            <div class="status-badge ${statusClass(item.status)}">${item.status}</div>
+          </div>
+        `).join('');
+      }
+
+      function statusClass(status) {
+        if(status === "Pending") return "badge-pending";
+        if(status === "In Progress") return "badge-progress";
+        if(status === "Completed") return "badge-done";
+        return "badge-hold";
+      }
+
+      function goToBatchWorkOrder() {
+        document.getElementById('dashboardSection').classList.add('hidden');
+        document.getElementById('creationSection').classList.remove('hidden');
+        document.getElementById('mainHeader').innerHTML = "<h1>BATCH WORK ORDER</h1>";
+      }
+
+      function refreshDashboard() {
+        renderDashboard();
+      }
+
+      renderDashboard();
     </script>
   </body>
 </html>
