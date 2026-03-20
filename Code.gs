@@ -8,6 +8,99 @@ function doGet() {
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
 
+function getUserSheet_() {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  let sheet = ss.getSheetByName('User');
+  if (!sheet) {
+    initSheets();
+    sheet = ss.getSheetByName('User');
+  }
+  return sheet;
+}
+
+function normalizeBoolean_(value) {
+  if (value === true) return true;
+  const text = String(value || '').trim().toLowerCase();
+  return text === 'true' || text === '1' || text === 'yes';
+}
+
+function ensureAdminAccount_() {
+  const sheet = getUserSheet_();
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]).trim() === 'phukao') {
+      sheet.getRange(i + 1, 2).setValue("'555559");
+      sheet.getRange(i + 1, 6).setValue(true);
+      if (!String(data[i][2] || '').trim()) sheet.getRange(i + 1, 3).setValue('phukao');
+      return;
+    }
+  }
+
+  const newRow = new Array(15).fill('');
+  newRow[0] = 'phukao';
+  newRow[1] = "'555559";
+  newRow[2] = 'phukao';
+  newRow[4] = 'Admin';
+  newRow[5] = true;
+  newRow[13] = '';
+  newRow[14] = new Date();
+  sheet.appendRow(newRow);
+}
+
+function buildUserObject_(row, rowIndex) {
+  const isAdmin = normalizeBoolean_(row[5]);
+  const isStaff = normalizeBoolean_(row[6]);
+  const isSupplier = normalizeBoolean_(row[7]);
+  const approved = isAdmin || isStaff || isSupplier;
+  const fullName = String(row[2] || '').trim() || String(row[0] || '').trim();
+  let role = 'PENDING';
+  if (isAdmin) role = 'ADMIN';
+  else if (isStaff) role = 'STAFF';
+  else if (isSupplier) role = 'SUPPLIER';
+
+  return {
+    rowIndex: rowIndex,
+    userId: String(row[0] || '').trim(),
+    fullName: fullName,
+    position: String(row[4] || '').trim(),
+    isAdmin: isAdmin,
+    isStaff: isStaff,
+    isSupplier: isSupplier,
+    role: role,
+    approved: approved,
+    email: String(row[9] || '').trim(),
+    line: String(row[10] || '').trim(),
+    phone: String(row[11] || '').trim(),
+    team: String(row[13] || '').trim()
+  };
+}
+
+function getUserRowByUserId_(userId) {
+  const sheet = getUserSheet_();
+  const data = sheet.getDataRange().getValues();
+  const inputUserId = String(userId || '').trim();
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]).trim() === inputUserId) {
+      return {
+        sheet: sheet,
+        rowIndex: i + 1,
+        row: data[i],
+        user: buildUserObject_(data[i], i + 1)
+      };
+    }
+  }
+  return null;
+}
+
+function assertAdmin_(actingUserId) {
+  ensureAdminAccount_();
+  if (String(actingUserId || '').trim() === 'phukao') return;
+  const found = getUserRowByUserId_(actingUserId);
+  if (!found || !found.user.isAdmin) {
+    throw new Error('ไม่มีสิทธิ์ใช้งานส่วนนี้');
+  }
+}
+
 function initSheets() {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const sheetsInfo = {
@@ -19,7 +112,7 @@ function initSheets() {
       'VOSteps', 'ActualStartDate', 'ActualEndDate', 'Remark' 
     ],
     // เพิ่ม Sheet User และตั้ง Timestamp ให้อยู่ที่ Col N (ตำแหน่งที่ 14)
-    'User': ['UserID', 'Password', '', '', 'Position', '', '', '', '', 'Email', 'Line', 'Phone', '','','Timestamp'],
+    'User': ['UserID', 'Password', 'FullName', '', 'Position', 'IsAdmin', 'IsStaff', 'IsSupplier', '', 'Email', 'Line', 'Phone', '', 'Team', 'Timestamp'],
     // เพิ่ม Sheet หมวดหมู่
     'MainDefect': ['ID', 'MainCategory_Name'],
     'SecondaryDefect': ['ID', 'MainCategory_Ref', 'SubCategory_Name'] // แก้ไขตัวสะกด
@@ -36,6 +129,8 @@ function initSheets() {
       sheet.getRange(1, 1, 1, sheetsInfo[name].length).setFontWeight("bold").setBackground("#f3f4f6");
     }
   });
+
+  ensureAdminAccount_();
 }
 
 // 2. ฟังก์ชันดึงข้อมูลทั้งหมด
@@ -116,6 +211,43 @@ function getAllData() {
   });
 
   return JSON.stringify(structuredJobs);
+}
+
+function getAllDataForUser(userId) {
+  ensureAdminAccount_();
+  const found = getUserRowByUserId_(userId);
+  const allJobs = JSON.parse(getAllData());
+
+  if (!found) {
+    return JSON.stringify(allJobs);
+  }
+
+  if (found.user.isAdmin || found.user.isStaff) {
+    return JSON.stringify(allJobs);
+  }
+
+  if (!found.user.isSupplier) {
+    return JSON.stringify([]);
+  }
+
+  const team = String(found.user.team || '').trim();
+  if (!team) {
+    return JSON.stringify([]);
+  }
+
+  const filteredJobs = allJobs
+    .map(job => ({
+      ...job,
+      tasks: (job.tasks || [])
+        .map(task => ({
+          ...task,
+          defects: (task.defects || []).filter(defect => String(defect.team || '').trim() === team)
+        }))
+        .filter(task => (task.defects || []).length > 0)
+    }))
+    .filter(job => (job.tasks || []).length > 0);
+
+  return JSON.stringify(filteredJobs);
 }
 
 function addJob(formData) {
@@ -1072,15 +1204,12 @@ function exportDefectReportToPDF(taskId) {
 
 // --- ฟังก์ชันสำหรับระบบ Auth ---
 function registerUser(formData) {
-  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  let sheet = ss.getSheetByName('User');
-  if (!sheet) {
-    initSheets();
-    sheet = ss.getSheetByName('User');
-  }
+  ensureAdminAccount_();
+  const sheet = getUserSheet_();
   
   const data = sheet.getDataRange().getValues();
   const inputUserId = String(formData.userId).trim();
+
 
   // เช็คว่า User ID ซ้ำหรือไม่
   for (let i = 1; i < data.length; i++) {
@@ -1094,11 +1223,16 @@ function registerUser(formData) {
   const newRow = new Array(15).fill('');
   newRow[0] = formData.userId;
   newRow[1] = "'" + formData.password; // เติม ' นำหน้า Password บังคับให้เป็น Text
+  newRow[2] = formData.fullName || formData.userId;
   newRow[4] = formData.position;       // Col E: Position
+  newRow[5] = false;
+  newRow[6] = false;
+  newRow[7] = false;
   newRow[9] = formData.email;          // Col J: Email
   newRow[10] = formData.line;          // Col K: Line
   newRow[11] = formData.phone;         // Col L: Phone
-  newRow[14] = new Date();             // Index ที่ 13 คือ Col N
+  newRow[13] = '';
+  newRow[14] = new Date();
 
   sheet.appendRow(newRow);
   
@@ -1106,9 +1240,11 @@ function registerUser(formData) {
 }
 
 function loginUser(userId, password) {
+  ensureAdminAccount_();
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const sheet = ss.getSheetByName('User');
   if (!sheet) throw new Error('ไม่พบฐานข้อมูลผู้ใช้งาน กรุณาติดต่อผู้ดูแลระบบ');
+
 
   const data = sheet.getDataRange().getValues();
   
@@ -1119,7 +1255,7 @@ function loginUser(userId, password) {
   for (let i = 1; i < data.length; i++) {
     const sheetUserId = String(data[i][0]).trim();
     let sheetPassword = String(data[i][1]).trim();
-    
+
     // ลบเครื่องหมาย ' ออก หากมีติดมาจากการบันทึกแบบบังคับเป็นข้อความ
     if (sheetPassword.startsWith("'")) {
         sheetPassword = sheetPassword.substring(1);
@@ -1127,12 +1263,64 @@ function loginUser(userId, password) {
 
     // เช็ค User ID และ Password
     if (sheetUserId === inputUserId && sheetPassword === inputPassword) {
-      return { 
-        userId: data[i][0], 
-        fullName: data[i][0] // เอาชื่อ-นามสกุลออก จึงส่ง UserID ไปแสดงผลแทน
-      };
+      const user = buildUserObject_(data[i], i + 1);
+      if (!user.approved) {
+        throw new Error('บัญชีของคุณยังไม่ได้รับการอนุมัติจากผู้ดูแลระบบ');
+      }
+      return user;
     }
   }
   
   throw new Error('User ID หรือ รหัสผ่าน ไม่ถูกต้อง');
+}
+
+function getCurrentUserProfile(userId) {
+  ensureAdminAccount_();
+  const found = getUserRowByUserId_(userId);
+  if (!found) throw new Error('ไม่พบข้อมูลผู้ใช้งาน');
+  return found.user;
+}
+
+function updateUserProfile(userId, profileData) {
+  ensureAdminAccount_();
+  const found = getUserRowByUserId_(userId);
+  if (!found) throw new Error('ไม่พบข้อมูลผู้ใช้งาน');
+
+  found.sheet.getRange(found.rowIndex, 3).setValue(profileData.fullName || '');
+  found.sheet.getRange(found.rowIndex, 10).setValue(profileData.email || '');
+  found.sheet.getRange(found.rowIndex, 11).setValue(profileData.line || '');
+  found.sheet.getRange(found.rowIndex, 12).setValue(profileData.phone || '');
+
+  return getCurrentUserProfile(userId);
+}
+
+function getUsersForManagement(actingUserId) {
+  assertAdmin_(actingUserId);
+  const sheet = getUserSheet_();
+  const data = sheet.getDataRange().getValues();
+  const users = [];
+
+  for (let i = 1; i < data.length; i++) {
+    if (!String(data[i][0] || '').trim()) continue;
+    users.push(buildUserObject_(data[i], i + 1));
+  }
+
+  return JSON.stringify(users);
+}
+
+function updateManagedUser(actingUserId, payload) {
+  assertAdmin_(actingUserId);
+  const found = getUserRowByUserId_(payload.userId);
+  if (!found) throw new Error('ไม่พบข้อมูลผู้ใช้งาน');
+
+  const isAdmin = !!payload.isAdmin;
+  const isStaff = !isAdmin && !!payload.isStaff;
+  const isSupplier = !isAdmin && !isStaff && !!payload.isSupplier;
+
+  found.sheet.getRange(found.rowIndex, 6).setValue(isAdmin);
+  found.sheet.getRange(found.rowIndex, 7).setValue(isStaff);
+  found.sheet.getRange(found.rowIndex, 8).setValue(isSupplier);
+  found.sheet.getRange(found.rowIndex, 14).setValue(payload.team || '');
+
+  return JSON.stringify(buildUserObject_(found.sheet.getRange(found.rowIndex, 1, 1, 15).getValues()[0], found.rowIndex));
 }
