@@ -163,6 +163,7 @@
     const STAFFS = ['ณภัทร ปรีชาวุฒิวงศ์', 'ณเดช คูกิมิยะ', 'USER_CURRENT'];
     const TEAMS = ['ทีมช่างสี (Internal)', 'ทีมช่างไฟ (Internal)', 'Supplier A (โครงสร้าง)', 'Supplier B (ประปา)'];
     const POSITIONS = ['SAS Staff', 'Supplier'];
+    const ROLE_LABELS = { ADMIN: 'Admin', STAFF: 'Staff', SUPPLIER: 'Supplier', PENDING: 'Pending Approval' };
 
     // --- Icons (Phosphor/Lucide style via inline SVG) ---
     const Icons = {
@@ -180,7 +181,7 @@
       X: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
       DotsThree: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>,
       Trash: ({ className }) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>,
-      Settings: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>,
+      Settings: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0-2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>,
       CheckCircle: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>,
       Download: ({ className }) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>,
       User: ({ className }) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>,
@@ -744,7 +745,7 @@
         return savedUser ? JSON.parse(savedUser) : null;
       });
       const [authMode, setAuthMode] = useState('LOGIN');
-      const [authForm, setAuthForm] = useState({ userId: '', password: '', confirmPassword: '', position: '', email: '', line: '', phone: '' });
+      const [authForm, setAuthForm] = useState({ userId: '', password: '', confirmPassword: '', fullName: '', position: '', email: '', line: '', phone: '' });
       const [authLoading, setAuthLoading] = useState(false);
       const [authError, setAuthError] = useState('');
 
@@ -772,6 +773,10 @@
       const [showDefectForm, setShowDefectForm] = useState(false);
       const [editingJob, setEditingJob] = useState(null);
 
+      const [managedUsers, setManagedUsers] = useState([]);
+      const [isUsersLoading, setIsUsersLoading] = useState(false);
+      const [profileForm, setProfileForm] = useState({ fullName: '', email: '', line: '', phone: '' });
+
       // --- Sidebar State ---
       const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
@@ -784,6 +789,12 @@
       }, []);
 
       const toggleSidebar = () => setIsSidebarOpen(prev => !prev);
+
+      const isAdmin = currentUser?.role === 'ADMIN';
+      const isStaff = currentUser?.role === 'STAFF';
+      const isSupplier = currentUser?.role === 'SUPPLIER';
+      const canManageProjects = isAdmin || isStaff;
+      const canManageUsers = isAdmin;
 
       const fetchData = (softRefresh = false) => {
         if (softRefresh) {
@@ -804,30 +815,76 @@
             setIsLoading(false); 
             setIsRefreshing(false);
           })
-          .getAllData();
+          .getAllDataForUser(currentUser?.userId || '');
       };
-      
+
+      const fetchManagedUsers = () => {
+        if (!canManageUsers || !currentUser?.userId) return;
+        setIsUsersLoading(true);
+        google.script.run
+          .withSuccessHandler(data => {
+            setManagedUsers(JSON.parse(data));
+            setIsUsersLoading(false);
+          })
+          .withFailureHandler(err => {
+            alert('เกิดข้อผิดพลาดในการโหลดผู้ใช้งาน: ' + err.message);
+            setIsUsersLoading(false);
+          })
+          .getUsersForManagement(currentUser.userId);
+      };
+
       const fetchMasterData = () => {
         google.script.run
-          .withSuccessHandler(data => { 
-            const parsed = JSON.parse(data); 
-            setOwnerMaster(parsed.owners); 
-            setUniqueSites(parsed.sites); 
+          .withSuccessHandler(data => {
+            const parsed = JSON.parse(data);
+            setOwnerMaster(parsed.owners);
+            setUniqueSites(parsed.sites);
             setMainCategories(parsed.mainCategories || []);
             setSubCategoriesMap(parsed.subCategories || {});
           })
           .withFailureHandler(err => console.error('Error fetching master data:', err))
-          .getMasterData(); 
+          .getMasterData();
+      };
+
+      const refreshCurrentUserProfile = () => {
+        if (!currentUser?.userId) return;
+        google.script.run
+          .withSuccessHandler(user => {
+            sessionStorage.setItem('sas_user', JSON.stringify(user));
+            setCurrentUser(user);
+            setProfileForm({
+              fullName: user.fullName || '',
+              email: user.email || '',
+              line: user.line || '',
+              phone: user.phone || ''
+            });
+          })
+          .withFailureHandler(err => console.error('Error refreshing user profile:', err))
+          .getCurrentUserProfile(currentUser.userId);
       };
 
       useEffect(() => {
+        if (!currentUser) return;
         fetchData();
         fetchMasterData();
-      }, []);
+        fetchManagedUsers();
+        refreshCurrentUserProfile();
+      }, [currentUser?.userId]);
+
+      useEffect(() => {
+        if (!currentUser) return;
+        if (isSupplier && !['SUPPLIER_DEFECTS', 'DEFECT_DETAIL', 'PROFILE_SETTINGS'].includes(view)) {
+          setView('SUPPLIER_DEFECTS');
+        }
+        if (!isSupplier && view === 'SUPPLIER_DEFECTS') {
+          setView('DASHBOARD');
+        }
+      }, [currentUser?.role, view]);
 
       const handleRefreshData = () => {
         fetchData(true);
-        fetchMasterData();
+        fetchManagedUsers();
+        refreshCurrentUserProfile();
       };
 
       const handleLogout = () => {
@@ -864,22 +921,37 @@
         .filter(defect => defect.major === 'ใช่' || defect.status === 'ยังไม่แก้ไข' || defect.status === 'รอดำเนินการ')
         .slice(0, 6);
 
+      const supplierDefects = jobs.flatMap(job => (job.tasks || []).flatMap(task => (task.defects || []).map(defect => ({
+        ...defect,
+        taskId: task.id,
+        taskScope: task.scope,
+        taskStatus: task.status,
+        building: task.building,
+        unit: task.unit,
+        customerName: task.customerName,
+        jobId: job.id,
+        site: job.site,
+        owner: job.owner,
+        ownerCompany: job.ownerCompany
+      }))));
+
       const handleAuthSubmit = (e) => {
         e.preventDefault();
         setAuthError('');
         setAuthLoading(true);
 
         if (authMode === 'REGISTER') {
-          if (!authForm.userId || !authForm.password || !authForm.position) {
+          if (!authForm.userId || !authForm.password || !authForm.position || !authForm.fullName) {
             setAuthError('กรุณากรอกข้อมูลที่มีเครื่องหมาย * ให้ครบถ้วน'); setAuthLoading(false); return;
           }
           if (authForm.password !== authForm.confirmPassword) {
             setAuthError('รหัสผ่านและการยืนยันรหัสผ่านไม่ตรงกัน'); setAuthLoading(false); return;
           }
+
           google.script.run
             .withSuccessHandler(() => {
-              alert('สมัครสมาชิกสำเร็จ กรุณาเข้าสู่ระบบ');
-              setAuthMode('LOGIN'); setAuthForm({ userId: '', password: '', confirmPassword: '', position: '', email: '', line: '', phone: '' }); setAuthLoading(false);
+              alert('สมัครสมาชิกสำเร็จ กรุณารอ Admin อนุมัติก่อนเข้าใช้งาน');
+              setAuthMode('LOGIN'); setAuthForm({ userId: '', password: '', confirmPassword: '', fullName: '', position: '', email: '', line: '', phone: '' }); setAuthLoading(false);
             })
             .withFailureHandler(err => { setAuthError(err.message); setAuthLoading(false); })
             .registerUser(authForm);
@@ -891,11 +963,42 @@
             .withSuccessHandler((user) => { 
               sessionStorage.setItem('sas_user', JSON.stringify(user));
               setCurrentUser(user); 
+              setView(user.role === 'SUPPLIER' ? 'SUPPLIER_DEFECTS' : 'DASHBOARD');
               setAuthLoading(false); 
             })
             .withFailureHandler(err => { setAuthError(err.message); setAuthLoading(false); })
             .loginUser(authForm.userId, authForm.password);
         }
+      };
+
+      const handleSaveProfile = () => {
+        setIsSaving(true);
+        google.script.run
+          .withSuccessHandler(user => {
+            sessionStorage.setItem('sas_user', JSON.stringify(user));
+            setCurrentUser(user);
+            setIsSaving(false);
+            alert('บันทึกข้อมูลส่วนตัวเรียบร้อย');
+          })
+          .withFailureHandler(err => {
+            alert('เกิดข้อผิดพลาด: ' + err.message);
+            setIsSaving(false);
+          })
+          .updateUserProfile(currentUser.userId, profileForm);
+      };
+
+      const handleUpdateManagedUser = (userId, changes) => {
+        setIsSaving(true);
+        google.script.run
+          .withSuccessHandler(() => {
+            fetchManagedUsers();
+            setIsSaving(false);
+          })
+          .withFailureHandler(err => {
+            alert('เกิดข้อผิดพลาด: ' + err.message);
+            setIsSaving(false);
+          })
+          .updateManagedUser(currentUser.userId, { userId, ...changes });
       };
 
       // --- CRUD Functions ---
@@ -1323,9 +1426,11 @@
               </div>
               <nav className="flex-1 py-6 flex flex-col gap-2 px-3">
                 {[
-                  { icon: Icons.Grid, label: 'Dashboard', targetView: 'DASHBOARD', active: view === 'DASHBOARD' },
-                  { icon: Icons.Building, label: 'Project', targetView: 'JOB_LIST', active: view === 'JOB_LIST' },
-                  { icon: Icons.Calendar, label: 'Tasks & Defects', targetView: null, active: view === 'JOB_DETAIL' || view === 'TASK_DETAIL' || view === 'DEFECT_DETAIL' },
+                  ...(!isSupplier ? [{ icon: Icons.Grid, label: 'Dashboard', targetView: 'DASHBOARD', active: view === 'DASHBOARD' }] : []),
+                  ...(isSupplier ? [{ icon: Icons.Calendar, label: 'My Defects', targetView: 'SUPPLIER_DEFECTS', active: view === 'SUPPLIER_DEFECTS' || view === 'DEFECT_DETAIL' }] : [{ icon: Icons.Building, label: 'Project', targetView: 'JOB_LIST', active: view === 'JOB_LIST' }]),
+                  ...(!isSupplier ? [{ icon: Icons.Calendar, label: 'Tasks & Defects', targetView: null, active: view === 'JOB_DETAIL' || view === 'TASK_DETAIL' || view === 'DEFECT_DETAIL' }] : []),
+                  ...(canManageUsers ? [{ icon: Icons.User, label: 'User Management', targetView: 'USER_MANAGEMENT', active: view === 'USER_MANAGEMENT' }] : []),
+                  { icon: Icons.Settings, label: 'My Profile', targetView: 'PROFILE_SETTINGS', active: view === 'PROFILE_SETTINGS' },
                 ].map((item, idx) => {
                   const IconComp = item.icon;
                   return (
@@ -1340,7 +1445,7 @@
                  <Avatar name={currentUser?.fullName} />
                  <div className="flex-1 overflow-hidden">
                     <div className="text-sm font-bold truncate">{currentUser?.fullName}</div>
-                    <div className="text-xs text-brand-200 truncate">Sign Out</div>
+                    <div className="text-xs text-brand-200 truncate">{ROLE_LABELS[currentUser?.role] || 'User'} • Sign Out</div>
                  </div>
               </div>
             </div>
@@ -1445,19 +1550,11 @@
                             </div>
                             <p className="text-sm text-gray-500 mt-1">{job.id} • {job.ownerCompany || '-'} • Owner: {job.owner || '-'}</p>
                           </div>
-                          <div className="grid grid-cols-3 gap-2 sm:gap-3 text-center">
-                            <div className="bg-slate-50 rounded-xl px-3 py-2">
-                              <div className="text-lg font-bold text-gray-900">{job.tasks?.length || 0}</div>
-                              <div className="text-[11px] text-gray-500 uppercase font-semibold">Tasks</div>
-                            </div>
-                            <div className="bg-amber-50 rounded-xl px-3 py-2">
-                              <div className="text-lg font-bold text-amber-700">{job.totalDefects}</div>
-                              <div className="text-[11px] text-amber-700 uppercase font-semibold">Defects</div>
-                            </div>
-                            <div className="bg-blue-50 rounded-xl px-3 py-2">
-                              <div className="text-lg font-bold text-blue-700">{job.activeTasks}</div>
-                              <div className="text-[11px] text-blue-700 uppercase font-semibold">Active</div>
-                            </div>
+                          <div className="flex items-center text-sm text-gray-500 gap-2">
+                            {job.replyDueDate && (
+                              <span className="text-[11px] text-gray-500 bg-gradient-to-br from-gray-50 to-slate-100 border border-gray-200 shadow-sm inline-block px-2 py-0.5 rounded-md font-medium">Due: {job.replyDueDate}</span>
+                            )}
+                            <span className="flex items-center"><Icons.File /><span className="ml-1">{job.tasks?.length || 0} Tasks</span></span>
                           </div>
                         </div>
                       </div>
@@ -1528,9 +1625,188 @@
                       </div>
                     </div>
                   ))}
-                  {urgentDefects.length === 0 && <div className="col-span-full py-10 text-center text-gray-400 bg-gray-50 rounded-2xl border border-dashed border-gray-200">ไม่มี defect ที่ต้องเฝ้าระวังเป็นพิเศษ</div>}
+                  {urgentDefects.length === 0 && <div className="col-span-full py-12 text-center text-gray-400 bg-gray-50 rounded-2xl border border-dashed border-gray-200">ไม่มี defect ที่ต้องเฝ้าระวังเป็นพิเศษ</div>}
                 </div>
               </div>
+            </div>
+          </div>
+        );
+      };
+
+      const UserManagementView = () => {
+        const pendingUsersCount = managedUsers.filter(user => !user.approved).length;
+
+        return (
+          <div className="pb-8 w-full">
+            <PageHeader 
+              title="User Management"
+              subtitle="ACCESS CONTROL"
+              badges={['Admin Only', pendingUsersCount > 0 ? `New Users ${pendingUsersCount}` : 'No New User']}
+              info={[{ value: managedUsers.length, label: 'Total Users' }, { value: pendingUsersCount, label: 'Pending Approval' }]}
+            />
+            <div className="max-w-7xl mx-auto px-6 md:px-8 space-y-5">
+              <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-3xl p-5 md:p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4 shadow-sm">
+                <div>
+                  <div className="text-sm font-bold text-amber-800">แจ้งเตือนผู้สมัครใหม่</div>
+                  <div className="text-3xl font-extrabold text-amber-700 mt-1">{pendingUsersCount}</div>
+                  <div className="text-sm text-amber-700/80 mt-1">ผู้ใช้ใหม่ที่รอ Admin อนุมัติสิทธิการใช้งาน</div>
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  <div className="px-4 py-3 rounded-2xl bg-white border border-amber-200 min-w-[140px]">
+                    <div className="text-xs font-bold uppercase tracking-wide text-gray-500">Users ทั้งหมด</div>
+                    <div className="text-2xl font-extrabold text-gray-900 mt-1">{managedUsers.length}</div>
+                  </div>
+                  <div className="px-4 py-3 rounded-2xl bg-white border border-amber-200 min-w-[140px]">
+                    <div className="text-xs font-bold uppercase tracking-wide text-gray-500">Approved</div>
+                    <div className="text-2xl font-extrabold text-emerald-700 mt-1">{managedUsers.filter(user => user.approved).length}</div>
+                  </div>
+                </div>
+              </div>
+
+              {isUsersLoading && <div className="p-10 text-center text-gray-400 bg-white rounded-3xl border border-gray-100 shadow-sm">กำลังโหลดข้อมูลผู้ใช้งาน...</div>}
+
+              {!isUsersLoading && (
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                  {managedUsers.map(user => (
+                    <div key={user.userId} className="bg-white rounded-3xl border border-gray-100 shadow-sm p-5 md:p-6 space-y-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="text-lg font-extrabold text-gray-900 truncate">{user.fullName || user.userId}</div>
+                          <div className="text-sm text-gray-500 truncate">UserID: {user.userId}</div>
+                        </div>
+                        <span className={`px-3 py-1 rounded-full text-xs font-bold shrink-0 ${user.approved ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}`}>{user.approved ? 'Approved' : 'New User'}</span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                        <div className="bg-gray-50 rounded-2xl p-3 border border-gray-100 sm:col-span-2">
+                          <div className="text-[11px] font-bold uppercase tracking-wide text-gray-500 mb-1">สิทธิในการใช้งาน</div>
+                          <select
+                            className="w-full bg-white border border-gray-200 rounded-xl p-2.5 text-sm outline-none"
+                            value={user.role}
+                            onChange={e => handleUpdateManagedUser(user.userId, { isAdmin: e.target.value === 'ADMIN', isStaff: e.target.value === 'STAFF', isSupplier: e.target.value === 'SUPPLIER', team: user.team || '' })}
+                          >
+                            <option value="PENDING">Pending</option>
+                            <option value="ADMIN">Admin</option>
+                            <option value="STAFF">Staff</option>
+                            <option value="SUPPLIER">Supplier</option>
+                          </select>
+                          <div className="text-xs text-gray-500 mt-2">สถานะปัจจุบัน: {ROLE_LABELS[user.role] || 'Pending Approval'}</div>
+                        </div>
+
+                        <div className="bg-gray-50 rounded-2xl p-3 border border-gray-100 sm:col-span-2">
+                          <div className="text-[11px] font-bold uppercase tracking-wide text-gray-500 mb-1">ชื่อทีมเข้าแก้ไข</div>
+                          <select
+                            className="w-full bg-white border border-gray-200 rounded-xl p-2.5 text-sm outline-none"
+                            value={user.team || ''}
+                            onChange={e => handleUpdateManagedUser(user.userId, { isAdmin: user.role === 'ADMIN', isStaff: user.role === 'STAFF', isSupplier: user.role === 'SUPPLIER', team: e.target.value })}
+                          >
+                            <option value="">- ไม่ระบุทีม -</option>
+                            {TEAMS.map(team => <option key={team} value={team}>{team}</option>)}
+                          </select>
+                        </div>
+
+                        <div className="bg-gray-50 rounded-2xl p-3 border border-gray-100">
+                          <div className="text-[11px] font-bold uppercase tracking-wide text-gray-500 mb-1">Line</div>
+                          <div className="text-gray-800 break-words">{user.line || '-'}</div>
+                        </div>
+
+                        <div className="bg-gray-50 rounded-2xl p-3 border border-gray-100">
+                          <div className="text-[11px] font-bold uppercase tracking-wide text-gray-500 mb-1">Phone</div>
+                          <div className="text-gray-800 break-words">{user.phone || '-'}</div>
+                        </div>
+
+                        <div className="bg-gray-50 rounded-2xl p-3 border border-gray-100 sm:col-span-2">
+                          <div className="text-[11px] font-bold uppercase tracking-wide text-gray-500 mb-1">Email</div>
+                          <div className="text-gray-800 break-all">{user.email || '-'}</div>
+                        </div>
+
+                        <div className="bg-gray-50 rounded-2xl p-3 border border-gray-100 sm:col-span-2">
+                          <div className="text-[11px] font-bold uppercase tracking-wide text-gray-500 mb-1">Position</div>
+                          <div className="text-gray-800">{user.position || '-'}</div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {!isUsersLoading && managedUsers.length === 0 && (
+                <div className="py-12 text-center text-gray-400 bg-white border border-dashed border-gray-200 rounded-3xl shadow-sm">ยังไม่มีข้อมูลผู้ใช้งานในระบบ</div>
+              )}
+            </div>
+          </div>
+        );
+      };
+
+      const ProfileSettingsView = () => {
+        return (
+          <div className="pb-8 w-full">
+            <PageHeader 
+              title="My Profile"
+              subtitle="ACCOUNT SETTINGS"
+              badges={[ROLE_LABELS[currentUser?.role] || 'User']}
+              info={[{ value: currentUser?.userId, label: 'User ID' }, { value: currentUser?.team || '-', label: 'Team' }]}
+            />
+            <div className="max-w-4xl mx-auto px-6 md:px-8">
+              <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 md:p-8 space-y-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">ชื่อ นามสกุล</label>
+                    <input type="text" value={profileForm.fullName} onChange={e => setProfileForm({ ...profileForm, fullName: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm outline-none focus:border-brand-500" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Email</label>
+                    <input type="email" value={profileForm.email} onChange={e => setProfileForm({ ...profileForm, email: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm outline-none focus:border-brand-500" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Line</label>
+                    <input type="text" value={profileForm.line} onChange={e => setProfileForm({ ...profileForm, line: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm outline-none focus:border-brand-500" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Phone</label>
+                    <input type="text" value={profileForm.phone} onChange={e => setProfileForm({ ...profileForm, phone: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm outline-none focus:border-brand-500" />
+                  </div>
+                </div>
+                <div className="flex justify-end">
+                  <button onClick={handleSaveProfile} className="bg-brand-600 text-white px-5 py-3 rounded-xl text-sm font-bold hover:bg-brand-700 shadow-sm">Save Profile</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      const SupplierDefectsView = () => {
+        return (
+          <div className="pb-8 w-full">
+            <PageHeader 
+              title="My Assigned Defects"
+              subtitle="SUPPLIER WORKLIST"
+              badges={[currentUser?.team || 'No Team']}
+              info={[{ value: supplierDefects.length, label: 'Assigned Defects' }, { value: supplierDefects.filter(defect => defect.status === 'ยังไม่แก้ไข' || defect.status === 'รอดำเนินการ').length, label: 'Open Items' }]}
+            />
+            <div className="max-w-7xl mx-auto px-6 md:px-8 grid grid-cols-1 xl:grid-cols-2 gap-5">
+              {supplierDefects.map(defect => (
+                <div key={defect.id} onClick={() => { setActiveJobId(defect.jobId); setActiveTaskId(defect.taskId); setActiveDefectId(defect.id); setView('DEFECT_DETAIL'); }} className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 cursor-pointer hover:border-brand-300 hover:bg-brand-50/30 transition-all">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap mb-3">
+                        <StatusBadge status={defect.status} size="sm" />
+                        <span className="text-xs font-semibold text-gray-500 bg-gray-100 px-2 py-1 rounded-full">{defect.taskScope}</span>
+                        {defect.major === 'ใช่' && <span className="bg-rose-50 text-rose-700 text-[10px] font-bold px-2 py-1 rounded border border-rose-200">MAJOR</span>}
+                      </div>
+                      <h3 className="text-lg font-bold text-gray-900">{defect.description || '-'}</h3>
+                      <div className="mt-3 space-y-1 text-sm text-gray-500">
+                        <div>{defect.mainCategory} / {defect.subCategory}</div>
+                        <div>Project: {defect.site} ({defect.jobId})</div>
+                        <div>Task: {defect.taskId} • Unit {defect.unit} / {defect.building}</div>
+                        <div>Customer: {defect.customerName || '-'} • Team: {defect.team || '-'}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {supplierDefects.length === 0 && <div className="col-span-full py-12 text-center text-gray-400 bg-white border border-dashed border-gray-200 rounded-3xl">ยังไม่มี defect ที่มอบหมายให้ทีมของคุณ</div>}
             </div>
           </div>
         );
@@ -1917,7 +2193,7 @@
             <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10">
               <div className="flex justify-center text-brand-600 mb-4"><div className="bg-white p-3 rounded-2xl shadow-sm"><Icons.Logo /></div></div>
               <h2 className="text-center text-3xl font-extrabold text-gray-900">{authMode === 'LOGIN' ? 'Welcome Back' : 'Create Account'}</h2>
-              <p className="mt-2 text-center text-sm text-gray-500">SAS Defect Management System</p>
+              <p className="text-sm text-gray-500 mt-1">SAS Defect Management System</p>
             </div>
             <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md relative z-10">
               <div className="bg-white py-8 px-4 shadow-xl shadow-brand-100/50 sm:rounded-3xl border border-gray-100 sm:px-10">
@@ -1933,6 +2209,13 @@
                   {authMode === 'REGISTER' && (
                     <>
                       <div>
+                        <label className="block text-sm font-semibold text-gray-700">Full Name</label>
+                        <div className="mt-1 relative rounded-xl shadow-sm">
+                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400"><Icons.User /></div>
+                          <input type="text" required value={authForm.fullName} onChange={e => setAuthForm({...authForm, fullName: e.target.value})} className="block w-full pl-10 pr-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-brand-500 text-sm" placeholder="ชื่อ นามสกุล" />
+                        </div>
+                      </div>
+                      <div>
                         <label className="block text-sm font-semibold text-gray-700">Position</label>
                         <div className="mt-1 relative rounded-xl shadow-sm">
                           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400"><Icons.Briefcase /></div>
@@ -1946,6 +2229,12 @@
                           <label className="block text-sm font-semibold text-gray-700">Email</label>
                           <div className="mt-1 relative"><div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400"><Icons.Mail /></div><input type="email" value={authForm.email} onChange={e => setAuthForm({...authForm, email: e.target.value})} className="block w-full pl-10 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm" /></div>
                         </div>
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700">Line</label>
+                          <div className="mt-1 relative"><div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400"><Icons.Mail /></div><input type="text" value={authForm.line} onChange={e => setAuthForm({...authForm, line: e.target.value})} className="block w-full pl-10 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm" /></div>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 gap-4">
                         <div>
                           <label className="block text-sm font-semibold text-gray-700">Phone</label>
                           <div className="mt-1 relative"><div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400"><Icons.Phone /></div><input type="tel" value={authForm.phone} onChange={e => setAuthForm({...authForm, phone: e.target.value})} className="block w-full pl-10 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm" /></div>
