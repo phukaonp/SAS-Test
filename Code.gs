@@ -1,5 +1,23 @@
 const SPREADSHEET_ID = '1BkhC_02odW8OINve6c3Ec4QI4cr_DEQvFGCVWrgebfg';
-const IMAGE_FOLDER_ID = '1pD5dfsyjrtoy7k3IUGaCGPMo6-SiCJPO'; // <--- เพิ่มบรรทัดนี้
+const IMAGE_FOLDER_ID = '1pD5dfsyjrtoy7k3IUGaCGPMo6-SiCJPO';
+
+const USER_SHEET_COLUMNS = {
+  USER_ID: 1,
+  PASSWORD: 2,
+  FULL_NAME: 3,
+  ROLE: 5,
+  POSITION: 6,
+  APPROVED: 7,
+  EMAIL: 10,
+  LINE: 11,
+  PHONE: 12,
+  TEAM: 13,
+  TIMESTAMP: 14
+};
+
+const USER_ROLE_OPTIONS = ['SAS Staff', 'Supplier'];
+const USER_POSITION_OPTIONS = ['Admin', 'Staff', 'Supplier'];
+const USER_TEAM_OPTIONS = ['ทีมช่างสี (Internal)', 'ทีมช่างไฟ (Internal)', 'Supplier A (โครงสร้าง)', 'Supplier B (ประปา)'];
 
 function doGet() {
   return HtmlService.createHtmlOutputFromFile('Index')
@@ -24,13 +42,31 @@ function normalizeBoolean_(value) {
   return text === 'true' || text === '1' || text === 'yes';
 }
 
+function normalizeAllowedValue_(value, allowedValues, fieldLabel, allowBlank) {
+  const text = String(value == null ? '' : value).trim();
+  if (!text) {
+    if (allowBlank) return '';
+    throw new Error(fieldLabel + ' ไม่สามารถเว้นว่างได้');
+  }
+  if (allowedValues.indexOf(text) === -1) {
+    throw new Error(fieldLabel + ' ไม่ถูกต้อง');
+  }
+  return text;
+}
+
+function getUserTeamOptions_() {
+  return USER_TEAM_OPTIONS.slice();
+}
+
 function ensureAdminAccount_() {
   const sheet = getUserSheet_();
   const data = sheet.getDataRange().getValues();
   for (let i = 1; i < data.length; i++) {
     if (String(data[i][0]).trim() === 'phukao') {
       sheet.getRange(i + 1, 2).setValue("'555559");
-      sheet.getRange(i + 1, 6).setValue(true);
+      sheet.getRange(i + 1, 7).setValue(true); // Col G: Approved
+      sheet.getRange(i + 1, 5).setValue('SAS Staff'); // Col E: Role
+      sheet.getRange(i + 1, 6).setValue('Admin'); // Col F: Position
       if (!String(data[i][2] || '').trim()) sheet.getRange(i + 1, 3).setValue('phukao');
       return;
     }
@@ -40,18 +76,24 @@ function ensureAdminAccount_() {
   newRow[0] = 'phukao';
   newRow[1] = "'555559";
   newRow[2] = 'phukao';
-  newRow[4] = 'Admin';
-  newRow[5] = true;
-  newRow[13] = '';
-  newRow[14] = new Date();
+  newRow[4] = 'SAS Staff'; // Col E: Role
+  newRow[5] = 'Admin';     // Col F: Position
+  newRow[6] = true;        // Col G: Approved
+  newRow[13] = new Date(); // Col N: Timestamp
   sheet.appendRow(newRow);
 }
 
 function buildUserObject_(row, rowIndex) {
-  const isAdmin = normalizeBoolean_(row[5]);
-  const isStaff = normalizeBoolean_(row[6]);
-  const isSupplier = normalizeBoolean_(row[7]);
-  const approved = isAdmin || isStaff || isSupplier;
+  // การแมปข้อมูลตามคำขอ: 
+  // Col E (Index 4) = Role, Col F (Index 5) = Position, Col G (Index 6) = Approved, Col M (Index 12) = Team
+  const roleValue = String(row[4] || '').trim();
+  const position = String(row[5] || '').trim();
+  const approved = normalizeBoolean_(row[6]);
+  
+  const isAdmin = position === 'Admin';
+  const isStaff = position === 'Staff';
+  const isSupplier = position === 'Supplier';
+  
   const fullName = String(row[2] || '').trim() || String(row[0] || '').trim();
   let role = 'PENDING';
   if (isAdmin) role = 'ADMIN';
@@ -61,8 +103,10 @@ function buildUserObject_(row, rowIndex) {
   return {
     rowIndex: rowIndex,
     userId: String(row[0] || '').trim(),
+    password: String(row[1] || '').trim().replace(/^'/, ''),
     fullName: fullName,
-    position: String(row[4] || '').trim(),
+    roleValue: roleValue,
+    position: position,
     isAdmin: isAdmin,
     isStaff: isStaff,
     isSupplier: isSupplier,
@@ -71,7 +115,14 @@ function buildUserObject_(row, rowIndex) {
     email: String(row[9] || '').trim(),
     line: String(row[10] || '').trim(),
     phone: String(row[11] || '').trim(),
-    team: String(row[13] || '').trim()
+    team: String(row[12] || '').trim(),
+    timestamp: row[13] || row[14] || '',
+    sheetValues: {
+      role: roleValue,
+      position: position,
+      approved: approved,
+      team: String(row[12] || '').trim()
+    }
   };
 }
 
@@ -111,16 +162,14 @@ function initSheets() {
       'SubCategory', 'Description', 'Major', 'Team', 'ImgUnit', 'ImgBefore', 'ImgDuring', 'ImgAfter', 'Timestamp', 
       'VOSteps', 'ActualStartDate', 'ActualEndDate', 'Remark' 
     ],
-    // เพิ่ม Sheet User และตั้ง Timestamp ให้อยู่ที่ Col N (ตำแหน่งที่ 14)
-    'User': ['UserID', 'Password', 'FullName', '', 'Position', 'IsAdmin', 'IsStaff', 'IsSupplier', '', 'Email', 'Line', 'Phone', '', 'Team', 'Timestamp'],
-    // เพิ่ม Sheet หมวดหมู่
+    // อัปเดต Header ของ Sheet User ให้ตรงกับโครงสร้างใหม่
+    'User': ['UserID', 'Password', 'FullName', '', 'Role', 'Position', 'Approved', '', '', 'Email', 'Line', 'Phone', 'Team', 'Timestamp', ''],
     'MainDefect': ['ID', 'MainCategory_Name'],
     'SecondaryDefect': ['ID', 'MainCategory_Ref', 'SubCategory_Name'] // แก้ไขตัวสะกด
   };
 
   Object.keys(sheetsInfo).forEach(name => {
     let sheet = ss.getSheetByName(name);
-    // เผื่อกรณีใช้ชื่อเดิมที่สะกดผิด
     if (!sheet && name === 'SecondaryDefect') sheet = ss.getSheetByName('SeconadaryDefect');
     
     if (!sheet) {
@@ -133,11 +182,9 @@ function initSheets() {
   ensureAdminAccount_();
 }
 
-// 2. ฟังก์ชันดึงข้อมูลทั้งหมด
 function getAllData() {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
 
-  // ฟังก์ชันย่อยสำหรับแปลงข้อมูลจาก Sheet เป็น Object
   const getSheetData = (sheetName) => {
     const sheet = ss.getSheetByName(sheetName);
     if (!sheet) return [];
@@ -146,11 +193,10 @@ function getAllData() {
     return data.map(row => {
       let obj = {};
       headers.forEach((header, index) => {
-        if (header) { // กันกรณีหัวตารางว่าง
+        if (header) { 
           obj[header] = row[index];
         }
       });
-      // เพิ่มตัวแปร _raw ไว้เก็บข้อมูลแถวดิบๆ สำหรับอ้างอิงด้วย Column (0=A, 1=B, ..., 6=G)
       obj['_raw'] = row; 
       return obj;
     });
@@ -186,7 +232,6 @@ function getAllData() {
         building: task.Building,
         unit: task.Unit,
         status: task.Status || task['TaskStatus'] || task['สถานะ'] || task['สถานะใบงาน'] || 'รอดำเนินการ',
-        // บังคับดึงข้อมูลจาก Column G (Index ที่ 6) โดยตรง
         customerName: task._raw[6] || task.CustomerName || task['ชื่อลูกค้า'] || '', 
         targetFixDate: task.TargetFixDate,
         actualStartDate: task.ActualStartDate,
@@ -258,9 +303,8 @@ function addJob(formData) {
   const siteStr = formData.site || 'UNKNOWN';
   let maxNum = 0;
   
-  // หารหัสล่าสุดของ Site นี้เพื่อรันเลข 000Y
   for (let i = 1; i < data.length; i++) {
-    if (data[i][1] === siteStr) { // คอลัมน์ B คือ Site
+    if (data[i][1] === siteStr) { 
       const id = data[i][0];
       const parts = id.split('-');
       if (parts.length >= 3) {
@@ -272,20 +316,19 @@ function addJob(formData) {
     }
   }
   
-  // สร้าง JobID รูปแบบ: JOB-{Site}-000Y
   const newNumStr = String(maxNum + 1).padStart(4, '0');
   const newId = `JOB-${siteStr}-${newNumStr}`;
   
   sheet.appendRow([
-    newId,                        // Col A
-    formData.site || '',          // Col B
-    formData.owner || '',         // Col C
-    formData.ownerCompany || '',  // Col D
-    formData.staff || '',         // Col E
-    formData.replyDueDate || '',  // Col F
-    formData.remark || '',        // Col G
-    new Date(),                   // Col H: Timestamp
-    'รอดำเนินการ'                   // Col I: Status
+    newId,                        
+    formData.site || '',          
+    formData.owner || '',         
+    formData.ownerCompany || '',  
+    formData.staff || '',         
+    formData.replyDueDate || '',  
+    formData.remark || '',        
+    new Date(),                   
+    'รอดำเนินการ'                   
   ]);
   return newId;
 }
@@ -297,9 +340,8 @@ function addTask(jobId, formData) {
   
   let maxNum = 0;
   
-  // หารหัส Task ล่าสุดของ JobID นี้เพื่อรันเลข 00Z
   for (let i = 1; i < data.length; i++) {
-    if (data[i][1] === jobId) { // คอลัมน์ B คือ JobID
+    if (data[i][1] === jobId) { 
       const id = data[i][0];
       const parts = id.split('-T');
       if (parts.length >= 2) {
@@ -311,7 +353,6 @@ function addTask(jobId, formData) {
     }
   }
 
-  // สร้าง TaskID รูปแบบ: {JobID}-T00Z
   const newNumStr = String(maxNum + 1).padStart(3, '0');
   const newId = `${jobId}-T${newNumStr}`;
 
@@ -328,17 +369,17 @@ function addTask(jobId, formData) {
   }
 
   sheet.appendRow([
-    newId,                        // Col A: TaskID
-    jobId,                        // Col B: JobID
-    formData.scope || 'SAS',      // Col C: Scope
-    formData.building || '',      // Col D: Building
-    formData.unit || '',          // Col E: Unit
-    'รอดำเนินการ',                  // Col F: Status
-    formData.customerName || '',  // Col G: ชื่อลูกค้า
-    formData.targetFixDate || '', // Col H: กำหนดวันเข้าแก้ไข
-    durationDate,                 // Col I: Duration
-    formData.remark || '',        // Col J: รายละเอียด
-    historyLog                    // Col K: ประวัติ
+    newId,                        
+    jobId,                        
+    formData.scope || 'SAS',      
+    formData.building || '',      
+    formData.unit || '',          
+    'รอดำเนินการ',                  
+    formData.customerName || '',  
+    formData.targetFixDate || '', 
+    durationDate,                 
+    formData.remark || '',        
+    historyLog                    
   ]);
   
   return newId;
@@ -351,9 +392,8 @@ function addDefect(taskId, defectData) {
 
   let maxNum = 0;
   
-  // หารหัส Defect ล่าสุดของ TaskID นี้เพื่อรันเลข 00A
   for (let i = 1; i < data.length; i++) {
-    if (data[i][1] === taskId) { // คอลัมน์ B คือ TaskID
+    if (data[i][1] === taskId) { 
       const id = data[i][0];
       const parts = id.split('-DF');
       if (parts.length >= 2) {
@@ -365,7 +405,6 @@ function addDefect(taskId, defectData) {
     }
   }
 
-  // สร้าง DefectID รูปแบบ: {TaskID}-DF00A
   const newNumStr = String(maxNum + 1).padStart(3, '0');
   const newId = `${taskId}-DF${newNumStr}`;
 
@@ -391,24 +430,24 @@ function addDefect(taskId, defectData) {
     imgBeforeUrl = uploadBase64(defectData.imgBefore, `Before_${newId}_${ts}`);
   }
 
-  const rowData = new Array(19).fill(''); // เผื่อความกว้างคอลัมน์ให้ถึง Index 18 เป็นอย่างน้อย
+  const rowData = new Array(19).fill(''); 
   
-  rowData[0] = newId;                        // Col A: DefectID
-  rowData[1] = taskId;                       // Col B: TaskID
-  rowData[2] = defectData.targetStartDate || ''; // Col C: TargetStartDate (วันเข้าแก้ไข)
-  rowData[3] = defectData.targetEndDate || '';   // Col D: TargetEndDate (วันแก้ไขเสร็จสิ้น)
-  rowData[4] = 'ยังไม่แก้ไข';                  // Col E: Status
-  rowData[5] = defectData.mainCategory;      // Col F: ลักษณะงานหลัก
-  rowData[6] = defectData.subCategory;       // Col G: ลักษณะงานรอง
-  rowData[7] = defectData.description;       // Col H: รายละเอียด
-  rowData[8] = defectData.major;             // Col I: Major
-  rowData[9] = defectData.team;              // Col J: ทีมเข้าแก้ไข
-  rowData[10] = '';                          // Col K: รูปภาพเลขยูนิต
-  rowData[11] = imgBeforeUrl;                // Col L: รูปภาพก่อนแก้ไข
-  rowData[12] = '';                          // Col M: รูปภาพระหว่างแก้ไข
-  rowData[13] = '';                          // Col N: รูปภาพหลังแก้ไข
-  rowData[14] = new Date();                  // Col O: Timestamp
-  rowData[15] = defectData.voSteps || '';    // Col P: VOSteps
+  rowData[0] = newId;                        
+  rowData[1] = taskId;                       
+  rowData[2] = defectData.targetStartDate || ''; 
+  rowData[3] = defectData.targetEndDate || '';   
+  rowData[4] = 'ยังไม่แก้ไข';                  
+  rowData[5] = defectData.mainCategory;      
+  rowData[6] = defectData.subCategory;       
+  rowData[7] = defectData.description;       
+  rowData[8] = defectData.major;             
+  rowData[9] = defectData.team;              
+  rowData[10] = '';                          
+  rowData[11] = imgBeforeUrl;                
+  rowData[12] = '';                          
+  rowData[13] = '';                          
+  rowData[14] = new Date();                  
+  rowData[15] = defectData.voSteps || '';    
 
   sheet.appendRow(rowData);
   return newId;
@@ -450,7 +489,6 @@ function getMasterData() {
     subCategories: {}
   };
 
-  // 1. ดึงข้อมูล Site
   const projectSheet = ss.getSheetByName('Project');
   if (projectSheet) {
     const pLastRow = projectSheet.getLastRow();
@@ -461,7 +499,6 @@ function getMasterData() {
     }
   }
 
-  // 2. ดึงข้อมูล Owner
   const ownerSheet = ss.getSheetByName('Owner');
   if (ownerSheet) {
     const oLastRow = ownerSheet.getLastRow();
@@ -477,31 +514,22 @@ function getMasterData() {
     }
   }
 
-  // 3. ดึงข้อมูล Main Category
   const mainDefectSheet = ss.getSheetByName('MainDefect');
   if (mainDefectSheet) {
     const mLastRow = mainDefectSheet.getLastRow();
     if (mLastRow >= 2) {
-      // ดึง Col B (index 2)
       const mData = mainDefectSheet.getRange(2, 2, mLastRow - 1, 1).getDisplayValues();
       const mCategories = mData.map(r => r[0].toString().trim()).filter(c => c !== '');
       result.mainCategories = [...new Set(mCategories)];
     }
   }
 
-  // 4. ดึงข้อมูล Sub Category (อ้างอิง Col B เป็น Key, ดึงข้อมูล Col D เป็น Value)
   const subDefectSheet = ss.getSheetByName('SecondaryDefect') || ss.getSheetByName('SeconadaryDefect'); 
   if (subDefectSheet) {
     const sLastRow = subDefectSheet.getLastRow();
     if (sLastRow >= 2) {
-      // ดึงข้อมูลตั้งแต่ Col A ถึง Col D (ครอบคลุมข้อมูลถึง Col D แน่นอน)
       const sData = subDefectSheet.getRange(2, 1, sLastRow - 1, 4).getDisplayValues();
-      
       sData.forEach(row => {
-        // อิงตามภาพ:
-        // row[1] คือ คอลัมน์ B (ลักษณะงานหลัก / MainCategory_Name)
-        // row[3] คือ คอลัมน์ D (ลักษณะงานรอง / SubCategory_Name)
-        
         const mainCat = row[1] ? row[1].toString().trim() : ''; 
         const subCat = row[3] ? row[3].toString().trim() : '';  
         
@@ -559,7 +587,6 @@ function deleteDefect(defectId) {
   throw new Error("ไม่พบ DefectID ที่ต้องการลบ");
 }
 
-// --- ฟังก์ชันเปลี่ยนสถานะ ---
 function updateTaskStatusAndJob(taskId, newStatus) {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const taskSheet = ss.getSheetByName('TASK');
@@ -571,27 +598,23 @@ function updateTaskStatusAndJob(taskId, newStatus) {
   for (let i = 1; i < taskData.length; i++) {
     if (taskData[i][0] === taskId) {
       taskRowIndex = i + 1;
-      jobId = taskData[i][1]; // ดึง JobID ในคอลัมน์ B (Index 1)
-      taskData[i][5] = newStatus; // อัปเดตสถานะจำลองใน Array เพื่อใช้เช็คเงื่อนไขทันที
+      jobId = taskData[i][1]; 
+      taskData[i][5] = newStatus; 
       break;
     }
   }
   
   if (taskRowIndex !== -1) {
-    // 1. อัปเดตสถานะของ Task ในคอลัมน์ F (ตำแหน่งที่ 6)
     taskSheet.getRange(taskRowIndex, 6).setValue(newStatus);
 
-    // 2. เงื่อนไขอัปเดต Job หลัก
     if (jobId) {
        const jobSheet = ss.getSheetByName('JOB');
        const jobData = jobSheet.getDataRange().getValues();
        
-       // เช็คสถานะของทุกใบงานย่อยภายใต้ Job เดียวกัน
        let allTasksFinished = true;
        for (let i = 1; i < taskData.length; i++) {
          if (taskData[i][1] === jobId) {
            const status = taskData[i][5];
-           // ถ้ายังมีงานที่ 'รอดำเนินการ', 'Active' หรือไม่มีสถานะ ถือว่างานหลักยังไม่จบ
            if (status === 'รอดำเนินการ' || status === 'Active' || status === '') {
              allTasksFinished = false;
              break;
@@ -609,10 +632,8 @@ function updateTaskStatusAndJob(taskId, newStatus) {
 
        if (jobRowIndex !== -1) {
          if (allTasksFinished) {
-           // เงื่อนไขใหม่: ถ้าทุกใบงานย่อยไม่มี รอดำเนินการ/Active แล้ว ให้ปิดใบงานหลัก
            jobSheet.getRange(jobRowIndex, 9).setValue('Closed');
          } else if (newStatus === 'Active') {
-           // เงื่อนไขเดิม: ถ้ามีการเปลี่ยน Task เป็น Active ให้ Job หลักเป็น Active
            if (jobData[jobRowIndex - 1][8] !== 'Active') { 
              jobSheet.getRange(jobRowIndex, 9).setValue('Active');
            }
@@ -620,14 +641,12 @@ function updateTaskStatusAndJob(taskId, newStatus) {
        }
     }
     
-    // บังคับบันทึกข้อมูลทันทีก่อนแจ้ง Frontend ว่าสำเร็จ
     SpreadsheetApp.flush();
     return "Success";
   }
   throw new Error("ไม่พบข้อมูลใบงานย่อยที่ต้องการเปลี่ยนสถานะ");
 }
 
-// --- ฟังก์ชันอัปโหลดรูปภาพทีละรูป (NEW) ---
 function uploadSingleDefectImage(defectId, field, base64Str) {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const sheet = ss.getSheetByName('DEFECT');
@@ -654,10 +673,8 @@ function uploadSingleDefectImage(defectId, field, base64Str) {
     const filename = `${field}_${defectId}_${ts}`;
     const blob = Utilities.newBlob(byteCharacters, contentType, filename);
     
-    // --- ส่วนที่แก้ไข: เล็งเป้าหมายไปที่โฟลเดอร์ ---
     const folder = DriveApp.getFolderById(IMAGE_FOLDER_ID);
     const file = folder.createFile(blob);
-    // ----------------------------------------
     
     file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
     
@@ -673,7 +690,6 @@ function uploadSingleDefectImage(defectId, field, base64Str) {
   }
 }
 
-// --- ฟังก์ชันอัปเดตสถานะ Defect (NEW) ---
 function updateDefectStatus(defectId, status) {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const sheet = ss.getSheetByName('DEFECT');
@@ -681,7 +697,6 @@ function updateDefectStatus(defectId, status) {
   
   for (let i = 1; i < data.length; i++) {
     if (data[i][0] === defectId) {
-      // คอลัมน์ Status ของ DEFECT อยู่ที่คอลัมน์ E (ตำแหน่งที่ 5)
       sheet.getRange(i + 1, 5).setValue(status);
       return "Success";
     }
@@ -689,7 +704,6 @@ function updateDefectStatus(defectId, status) {
   throw new Error("ไม่พบข้อมูล DefectID ที่ต้องการเปลี่ยนสถานะ");
 }
 
-// --- ฟังก์ชัน Export PDF แผนเข้าแก้ไข ---
 function exportTaskPlansToPDF(jobId) {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const allDataStr = getAllData();
@@ -702,7 +716,6 @@ function exportTaskPlansToPDF(jobId) {
   const folder = DriveApp.getFolderById(IMAGE_FOLDER_ID);
   let exportedFiles = [];
 
-  // แก้ปัญหาภาพไม่ขึ้น: ดึงไฟล์จาก Drive แปลงเป็น Base64 เพื่อฝังลงใน PDF โดยตรง
   const getPrintableImgUrl = (url) => {
     if (!url) return '';
     if (url.startsWith('data:image')) return url;
@@ -716,7 +729,6 @@ function exportTaskPlansToPDF(jobId) {
         const mimeType = blob.getContentType();
         return `data:${mimeType};base64,${base64}`;
       } catch (e) {
-        // Fallback กรณีดึงไฟล์ไม่ได้
         return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w500`;
       }
     }
@@ -854,7 +866,6 @@ function exportTaskPlansToPDF(jobId) {
             border-radius: 6px; 
           }
 
-          /* --- ส่วนลายเซ็น (Signature Section) --- */
           .signature-container {
               width: 100%;
               margin-top: 50px;
@@ -945,7 +956,6 @@ function exportTaskPlansToPDF(jobId) {
       html += `<p style="text-align:center; color:#94a3b8; padding: 30px 0; font-style: italic;">- ไม่มีรายการ Defect ในใบงานย่อยนี้ -</p>`;
     }
 
-    // --- ส่วน HTML ลายเซ็นต์ท้ายเอกสาร ---
     html += `
         <div class="signature-container">
             <table class="signature-table">
@@ -969,7 +979,6 @@ function exportTaskPlansToPDF(jobId) {
 
     html += `</body></html>`;
 
-    // แปลงเนื้อหาเป็น PDF
     const blob = Utilities.newBlob(html, MimeType.HTML).getAs(MimeType.PDF).setName(`RepairPlan_${task.id}.pdf`);
     const file = folder.createFile(blob);
     file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
@@ -980,7 +989,6 @@ function exportTaskPlansToPDF(jobId) {
   return JSON.stringify(exportedFiles);
 }
 
-// --- ฟังก์ชัน Export PDF เอกสารแก้ไข Defect (NEW) ---
 function exportDefectReportToPDF(taskId) {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const allDataStr = getAllData();
@@ -989,7 +997,6 @@ function exportDefectReportToPDF(taskId) {
   let targetTask = null;
   let targetJob = null;
   
-  // ค้นหา Job และ Task ที่ตรงกับ taskId
   for (const job of allJobs) {
     const foundTask = job.tasks.find(t => t.id === taskId);
     if (foundTask) {
@@ -1003,7 +1010,6 @@ function exportDefectReportToPDF(taskId) {
 
   const folder = DriveApp.getFolderById(IMAGE_FOLDER_ID);
   
-  // ฟังก์ชันย่อยสำหรับแปลงรูปเป็น Base64 ฝัง PDF
   const getPrintableImgUrl = (url) => {
     if (!url) return '';
     if (url.startsWith('data:image')) return url;
@@ -1125,7 +1131,6 @@ function exportDefectReportToPDF(taskId) {
     html += `<p style="text-align:center; color:#94a3b8; padding: 30px 0; font-style: italic;">- ไม่มีรายการ Defect ในใบงานย่อยนี้ -</p>`;
   }
 
-  // ลายเซ็นต์ Owner (จาก Job) และ ลูกค้า (จาก Task)
   html += `
         <div class="signature-container">
             <table class="signature-table">
@@ -1156,7 +1161,6 @@ function exportDefectReportToPDF(taskId) {
   return JSON.stringify({ taskId: targetTask.id, url: file.getUrl() });
 }
 
-// --- ฟังก์ชันสำหรับระบบ Auth ---
 function registerUser(formData) {
   ensureAdminAccount_();
   const sheet = getUserSheet_();
@@ -1164,28 +1168,26 @@ function registerUser(formData) {
   const data = sheet.getDataRange().getValues();
   const inputUserId = String(formData.userId).trim();
 
-  // เช็คว่า User ID ซ้ำหรือไม่
   for (let i = 1; i < data.length; i++) {
     if (String(data[i][0]).trim() === inputUserId) {
       throw new Error('User ID นี้มีผู้ใช้งานแล้ว กรุณาใช้ชื่ออื่น');
     }
   }
 
-  // บันทึกข้อมูลลง Sheet (Col A = UserID, Col B = Password, Col E = Position, Col J = Email, Col K = Line, Col L = Phone, Col N = Timestamp)
-  // สร้าง Array เปล่าๆ ความยาว 14 เพื่อให้ Timestamp ไปตกที่คอลัมน์ที่ 14 (Col N)
+  const roleValue = normalizeAllowedValue_(formData.roleValue, USER_ROLE_OPTIONS, 'Role', false);
+
   const newRow = new Array(15).fill('');
   newRow[0] = formData.userId;
   newRow[1] = "'" + formData.password; // เติม ' นำหน้า Password บังคับให้เป็น Text
   newRow[2] = formData.fullName || formData.userId;
-  newRow[4] = formData.position;       // Col E: Position
-  newRow[5] = false;
+  newRow[4] = roleValue;
+  newRow[5] = '';
   newRow[6] = false;
-  newRow[7] = false;
   newRow[9] = formData.email;          // Col J: Email
   newRow[10] = formData.line;          // Col K: Line
   newRow[11] = formData.phone;         // Col L: Phone
-  newRow[13] = '';
-  newRow[14] = new Date();
+  newRow[12] = '';
+  newRow[13] = new Date();
 
   sheet.appendRow(newRow);
   
@@ -1200,7 +1202,6 @@ function loginUser(userId, password) {
 
   const data = sheet.getDataRange().getValues();
   
-  // แปลงค่าที่ส่งมาเป็น String และตัดช่องว่างซ้ายขวา
   const inputUserId = String(userId).trim();
   const inputPassword = String(password).trim();
 
@@ -1208,12 +1209,10 @@ function loginUser(userId, password) {
     const sheetUserId = String(data[i][0]).trim();
     let sheetPassword = String(data[i][1]).trim();
 
-    // ลบเครื่องหมาย ' ออก หากมีติดมาจากการบันทึกแบบบังคับเป็นข้อความ
     if (sheetPassword.startsWith("'")) {
         sheetPassword = sheetPassword.substring(1);
     }
 
-    // เช็ค User ID และ Password
     if (sheetUserId === inputUserId && sheetPassword === inputPassword) {
       const user = buildUserObject_(data[i], i + 1);
       if (!user.approved) {
@@ -1262,18 +1261,36 @@ function getUsersForManagement(actingUserId) {
 
 function updateManagedUser(actingUserId, payload) {
   assertAdmin_(actingUserId);
+  if (!payload || !payload.userId) throw new Error('ไม่พบ userId สำหรับการบันทึกข้อมูล');
+  
   const found = getUserRowByUserId_(payload.userId);
   if (!found) throw new Error('ไม่พบข้อมูลผู้ใช้งาน');
 
-  // อ่านค่า Checkbox ตรงๆ จาก payload เพื่อให้เลือกได้อย่างอิสระตามหน้าจอ
-  const isAdmin = !!payload.isAdmin;
-  const isStaff = !!payload.isStaff;
-  const isSupplier = !!payload.isSupplier;
+  const fullName = String(payload.fullName == null ? found.user.fullName : payload.fullName).trim();
+  const password = String(payload.password == null ? found.user.password : payload.password).trim();
+  const roleValue = normalizeAllowedValue_(payload.roleValue == null ? found.user.roleValue : payload.roleValue, USER_ROLE_OPTIONS, 'Role', false);
+  const positionValue = normalizeAllowedValue_(payload.position == null ? found.user.position : payload.position, USER_POSITION_OPTIONS, 'Position', false);
+  const approved = normalizeBoolean_(payload.approved == null ? found.user.approved : payload.approved);
+  const teamValue = normalizeAllowedValue_(payload.team == null ? found.user.team : payload.team, getUserTeamOptions_(), 'ทีมเข้าแก้ไข', true);
+  const email = String(payload.email == null ? found.user.email : payload.email).trim();
+  const line = String(payload.line == null ? found.user.line : payload.line).trim();
+  const phone = String(payload.phone == null ? found.user.phone : payload.phone).trim();
 
-  found.sheet.getRange(found.rowIndex, 6).setValue(isAdmin); // Col F
-  found.sheet.getRange(found.rowIndex, 7).setValue(isStaff); // Col G
-  found.sheet.getRange(found.rowIndex, 8).setValue(isSupplier); // Col H
-  found.sheet.getRange(found.rowIndex, 14).setValue(payload.team || ''); // Col N
+  if (!fullName) throw new Error('Full Name ไม่สามารถเว้นว่างได้');
+  if (!password) throw new Error('Password ไม่สามารถเว้นว่างได้');
+  if (positionValue === 'Supplier' && !teamValue) {
+    throw new Error('กรุณาเลือกทีมเข้าแก้ไขสำหรับผู้ใช้ Supplier');
+  }
+
+  found.sheet.getRange(found.rowIndex, USER_SHEET_COLUMNS.PASSWORD).setValue("'" + password);
+  found.sheet.getRange(found.rowIndex, USER_SHEET_COLUMNS.FULL_NAME).setValue(fullName);
+  found.sheet.getRange(found.rowIndex, USER_SHEET_COLUMNS.ROLE).setValue(roleValue);
+  found.sheet.getRange(found.rowIndex, USER_SHEET_COLUMNS.POSITION).setValue(positionValue);
+  found.sheet.getRange(found.rowIndex, USER_SHEET_COLUMNS.APPROVED).setValue(approved);
+  found.sheet.getRange(found.rowIndex, USER_SHEET_COLUMNS.EMAIL).setValue(email);
+  found.sheet.getRange(found.rowIndex, USER_SHEET_COLUMNS.LINE).setValue(line);
+  found.sheet.getRange(found.rowIndex, USER_SHEET_COLUMNS.PHONE).setValue(phone);
+  found.sheet.getRange(found.rowIndex, USER_SHEET_COLUMNS.TEAM).setValue(teamValue);
 
   return JSON.stringify(buildUserObject_(found.sheet.getRange(found.rowIndex, 1, 1, 15).getValues()[0], found.rowIndex));
 }
