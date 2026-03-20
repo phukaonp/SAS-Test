@@ -74,7 +74,6 @@
       ];
     }
 
-    // --- Mock Google Apps Script API ---
     if (typeof google === 'undefined') {
       window.google = {
         script: {
@@ -105,7 +104,13 @@
                               'งานระบบประปา': ['ท่อรั่ว', 'ก๊อกน้ำซึม']
                             }
                         }));
-                        else if (p === 'loginUser') t.success({userId: args[0], fullName: 'ผู้ใช้งานระบบ (Mock)'});
+                        else if (p === 'loginUser') t.success({userId: args[0], fullName: 'ผู้ใช้งานระบบ (Mock)', role: 'ADMIN', isAdmin: true});
+                        else if (p === 'getUsersForManagement') {
+                           t.success(JSON.stringify([
+                             { userId: 'test_user1', fullName: 'สมปอง ทดสอบ', email: 'sompong@test.com', phone: '0812345678', position: 'Supplier', role: 'PENDING', approved: false, isAdmin: false, isStaff: false, isSupplier: false, team: '' },
+                             { userId: 'admin_1', fullName: 'ผู้ดูแลระบบ', email: 'admin@test.com', phone: '0899999999', position: 'SAS Staff', role: 'ADMIN', approved: true, isAdmin: true, isStaff: false, isSupplier: false, team: '' }
+                           ]));
+                        }
                         else if (p === 'exportTaskPlansToPDF' || p === 'exportDefectReportToPDF') t.success(JSON.stringify([{taskId: 'MOCK-DOC', url: '#'}]));
                         else if (p === 'updateTaskStatusAndJob') {
                            let taskId = args[0];
@@ -162,7 +167,8 @@
     // --- Data Options ---
     const STAFFS = ['ณภัทร ปรีชาวุฒิวงศ์', 'ณเดช คูกิมิยะ', 'USER_CURRENT'];
     const TEAMS = ['ทีมช่างสี (Internal)', 'ทีมช่างไฟ (Internal)', 'Supplier A (โครงสร้าง)', 'Supplier B (ประปา)'];
-    const POSITIONS = ['SAS Staff', 'Supplier'];
+    const USER_ROLE_OPTIONS = ['SAS Staff', 'Supplier'];
+    const USER_POSITION_OPTIONS = ['Admin', 'Staff', 'Supplier'];
     const ROLE_LABELS = { ADMIN: 'Admin', STAFF: 'Staff', SUPPLIER: 'Supplier', PENDING: 'Pending Approval' };
 
     // --- Icons (Phosphor/Lucide style via inline SVG) ---
@@ -190,7 +196,8 @@
       Mail: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>,
       Phone: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>,
       Refresh: ({ className }) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}><path d="M21 2v6h-6"></path><path d="M3 12a9 9 0 0 1 15-6.7L21 8"></path><path d="M3 22v-6h6"></path><path d="M21 12a9 9 0 0 1-15 6.7L3 16"></path></svg>,
-      Home: ({ className }) => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      Home: ({ className }) => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,
+      AlertCircle: ({ className }) => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
     };
 
     // --- Helper Components ---
@@ -539,7 +546,7 @@
 
           <div className="flex gap-4 mt-4 w-full max-w-2xl">
             <button onClick={onClose} className="flex-1 py-3.5 bg-gray-800 hover:bg-gray-700 border border-gray-600 transition-colors text-white rounded-xl font-bold">ยกเลิก</button>
-            <button onClick={handleSave} className="flex-1 py-3.5 bg-brand-600 hover:bg-brand-500 transition-colors text-white rounded-xl font-bold flex items-center justify-center shadow-lg shadow-brand-900/50">
+            <button onClick={handleSave} className="flex-1 py-3.5 bg-brand-600 hover:bg-brand-500 transition-colors text-white rounded-xl font-bold flex items-center justify-center shadow-lg shadow-brand-200/50">
               <span className="mr-2"><Icons.CheckCircle/></span> ยืนยันรูปภาพ
             </button>
           </div>
@@ -745,7 +752,7 @@
         return savedUser ? JSON.parse(savedUser) : null;
       });
       const [authMode, setAuthMode] = useState('LOGIN');
-      const [authForm, setAuthForm] = useState({ userId: '', password: '', confirmPassword: '', fullName: '', position: '', email: '', line: '', phone: '' });
+      const [authForm, setAuthForm] = useState({ userId: '', password: '', confirmPassword: '', fullName: '', roleValue: '', email: '', line: '', phone: '' });
       const [authLoading, setAuthLoading] = useState(false);
       const [authError, setAuthError] = useState('');
 
@@ -790,9 +797,9 @@
 
       const toggleSidebar = () => setIsSidebarOpen(prev => !prev);
 
-      const isAdmin = currentUser?.role === 'ADMIN';
-      const isStaff = currentUser?.role === 'STAFF';
-      const isSupplier = currentUser?.role === 'SUPPLIER';
+      const isAdmin = currentUser?.isAdmin === true || currentUser?.role === 'ADMIN';
+      const isStaff = currentUser?.isStaff === true || currentUser?.role === 'STAFF';
+      const isSupplier = currentUser?.isSupplier === true || currentUser?.role === 'SUPPLIER';
       const canManageProjects = isAdmin || isStaff;
       const canManageUsers = isAdmin;
 
@@ -873,13 +880,13 @@
 
       useEffect(() => {
         if (!currentUser) return;
-        if (isSupplier && !['SUPPLIER_DEFECTS', 'DEFECT_DETAIL', 'PROFILE_SETTINGS'].includes(view)) {
+        if (isSupplier && !isAdmin && !isStaff && !['SUPPLIER_DEFECTS', 'DEFECT_DETAIL', 'PROFILE_SETTINGS'].includes(view)) {
           setView('SUPPLIER_DEFECTS');
         }
         if (!isSupplier && view === 'SUPPLIER_DEFECTS') {
           setView('DASHBOARD');
         }
-      }, [currentUser?.role, view]);
+      }, [currentUser, view]);
 
       const handleRefreshData = () => {
         fetchData(true);
@@ -935,73 +942,6 @@
         ownerCompany: job.ownerCompany
       }))));
 
-      const handleAuthSubmit = (e) => {
-        e.preventDefault();
-        setAuthError('');
-        setAuthLoading(true);
-
-        if (authMode === 'REGISTER') {
-          if (!authForm.userId || !authForm.password || !authForm.position || !authForm.fullName) {
-            setAuthError('กรุณากรอกข้อมูลที่มีเครื่องหมาย * ให้ครบถ้วน'); setAuthLoading(false); return;
-          }
-          if (authForm.password !== authForm.confirmPassword) {
-            setAuthError('รหัสผ่านและการยืนยันรหัสผ่านไม่ตรงกัน'); setAuthLoading(false); return;
-          }
-
-          google.script.run
-            .withSuccessHandler(() => {
-              alert('สมัครสมาชิกสำเร็จ กรุณารอ Admin อนุมัติก่อนเข้าใช้งาน');
-              setAuthMode('LOGIN'); setAuthForm({ userId: '', password: '', confirmPassword: '', fullName: '', position: '', email: '', line: '', phone: '' }); setAuthLoading(false);
-            })
-            .withFailureHandler(err => { setAuthError(err.message); setAuthLoading(false); })
-            .registerUser(authForm);
-        } else {
-          if (!authForm.userId || !authForm.password) {
-            setAuthError('กรุณากรอก User ID และ รหัสผ่าน'); setAuthLoading(false); return;
-          }
-          google.script.run
-            .withSuccessHandler((user) => { 
-              sessionStorage.setItem('sas_user', JSON.stringify(user));
-              setCurrentUser(user); 
-              setView(user.role === 'SUPPLIER' ? 'SUPPLIER_DEFECTS' : 'DASHBOARD');
-              setAuthLoading(false); 
-            })
-            .withFailureHandler(err => { setAuthError(err.message); setAuthLoading(false); })
-            .loginUser(authForm.userId, authForm.password);
-        }
-      };
-
-      const handleSaveProfile = () => {
-        setIsSaving(true);
-        google.script.run
-          .withSuccessHandler(user => {
-            sessionStorage.setItem('sas_user', JSON.stringify(user));
-            setCurrentUser(user);
-            setIsSaving(false);
-            alert('บันทึกข้อมูลส่วนตัวเรียบร้อย');
-          })
-          .withFailureHandler(err => {
-            alert('เกิดข้อผิดพลาด: ' + err.message);
-            setIsSaving(false);
-          })
-          .updateUserProfile(currentUser.userId, profileForm);
-      };
-
-      const handleUpdateManagedUser = (userId, changes) => {
-        setIsSaving(true);
-        google.script.run
-          .withSuccessHandler(() => {
-            fetchManagedUsers();
-            setIsSaving(false);
-          })
-          .withFailureHandler(err => {
-            alert('เกิดข้อผิดพลาด: ' + err.message);
-            setIsSaving(false);
-          })
-          .updateManagedUser(currentUser.userId, { userId, ...changes });
-      };
-
-      // --- CRUD Functions ---
       const handleCreateJob = (formData) => {
         setIsSaving(true);
         google.script.run.withSuccessHandler(() => { fetchData(true); setShowJobForm(false); setIsSaving(false); })
@@ -1426,9 +1366,9 @@
               </div>
               <nav className="flex-1 py-6 flex flex-col gap-2 px-3">
                 {[
-                  ...(!isSupplier ? [{ icon: Icons.Grid, label: 'Dashboard', targetView: 'DASHBOARD', active: view === 'DASHBOARD' }] : []),
-                  ...(isSupplier ? [{ icon: Icons.Calendar, label: 'My Defects', targetView: 'SUPPLIER_DEFECTS', active: view === 'SUPPLIER_DEFECTS' || view === 'DEFECT_DETAIL' }] : [{ icon: Icons.Building, label: 'Project', targetView: 'JOB_LIST', active: view === 'JOB_LIST' }]),
-                  ...(!isSupplier ? [{ icon: Icons.Calendar, label: 'Tasks & Defects', targetView: null, active: view === 'JOB_DETAIL' || view === 'TASK_DETAIL' || view === 'DEFECT_DETAIL' }] : []),
+                  ...(!isSupplier || isAdmin || isStaff ? [{ icon: Icons.Grid, label: 'Dashboard', targetView: 'DASHBOARD', active: view === 'DASHBOARD' }] : []),
+                  ...((isSupplier && !isAdmin && !isStaff) ? [{ icon: Icons.Calendar, label: 'My Defects', targetView: 'SUPPLIER_DEFECTS', active: view === 'SUPPLIER_DEFECTS' || view === 'DEFECT_DETAIL' }] : [{ icon: Icons.Building, label: 'Project', targetView: 'JOB_LIST', active: view === 'JOB_LIST' }]),
+                  ...(!isSupplier || isAdmin || isStaff ? [{ icon: Icons.Calendar, label: 'Tasks & Defects', targetView: null, active: view === 'JOB_DETAIL' || view === 'TASK_DETAIL' || view === 'DEFECT_DETAIL' }] : []),
                   ...(canManageUsers ? [{ icon: Icons.User, label: 'User Management', targetView: 'USER_MANAGEMENT', active: view === 'USER_MANAGEMENT' }] : []),
                   { icon: Icons.Settings, label: 'My Profile', targetView: 'PROFILE_SETTINGS', active: view === 'PROFILE_SETTINGS' },
                 ].map((item, idx) => {
@@ -1445,7 +1385,7 @@
                  <Avatar name={currentUser?.fullName} />
                  <div className="flex-1 overflow-hidden">
                     <div className="text-sm font-bold truncate">{currentUser?.fullName}</div>
-                    <div className="text-xs text-brand-200 truncate">{ROLE_LABELS[currentUser?.role] || 'User'} • Sign Out</div>
+                    <div className="text-xs text-brand-200 truncate">Sign Out</div>
                  </div>
               </div>
             </div>
@@ -1464,7 +1404,7 @@
               </button>
               
               {!isDefect && (
-                <div className="flex-1 flex items-center bg-gray-50 rounded-full px-3 md:px-4 py-2 md:py-2.5 border border-gray-200 focus-within:border-brand-400 focus-within:ring-2 focus-within:ring-brand-100 transition-all w-full">
+                <div className="flex-1 flex items-center bg-gray-50 rounded-full px-3 md:px-4 py-2 md:py-2.5 border border-gray-200 focus-within:border-brand-400 focus:ring-2 focus:ring-brand-100 transition-all w-full">
                   <span className="text-gray-400"><Icons.Search className="w-4 h-4 md:w-5 md:h-5"/></span>
                   <input type="text" placeholder="Search projects, tasks..." className="bg-transparent border-none outline-none w-full ml-2 md:ml-3 text-sm placeholder-gray-400 text-gray-800" />
                 </div>
@@ -1515,7 +1455,6 @@
                 </button>
               }
             />
-
             <div className="max-w-7xl mx-auto px-6 md:px-8 space-y-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
                 {summaryCards.map(card => (
@@ -1548,7 +1487,7 @@
                               <h4 className="font-bold text-gray-900">{job.site}</h4>
                               <StatusBadge status={job.status} size="sm" />
                             </div>
-                            <p className="text-sm text-gray-500 mt-1">{job.id} • {job.ownerCompany || '-'} • Owner: {job.owner || '-'}</p>
+                            <p className="text-sm text-gray-500 mt-1">{job.id} • {job.ownerCompany || '-'}</p>
                           </div>
                           <div className="flex items-center text-sm text-gray-500 gap-2">
                             {job.replyDueDate && (
@@ -1563,10 +1502,12 @@
                   </div>
                 </div>
 
-                <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 space-y-5">
-                  <div>
-                    <h3 className="text-lg font-bold text-gray-900">Operational Snapshot</h3>
-                    <p className="text-sm text-gray-500 mt-1">มุมมองย่อของ pipeline งานปัจจุบัน</p>
+                <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
+                  <div className="flex items-center justify-between mb-5">
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-900">Operational Snapshot</h3>
+                      <p className="text-sm text-gray-500 mt-1">มุมมองย่อของ pipeline งานปัจจุบัน</p>
+                    </div>
                   </div>
                   <div className="space-y-3">
                     <div className="rounded-2xl bg-slate-50 p-4 border border-slate-100">
@@ -1612,7 +1553,7 @@
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   {urgentDefects.map(defect => (
                     <div key={defect.id} className="border border-gray-100 rounded-2xl p-4 bg-gray-50/60">
-                      <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-start justify-between gap-4">
                         <div>
                           <div className="flex items-center gap-2 flex-wrap mb-2">
                             <StatusBadge status={defect.status} size="sm" />
@@ -1625,7 +1566,7 @@
                       </div>
                     </div>
                   ))}
-                  {urgentDefects.length === 0 && <div className="col-span-full py-12 text-center text-gray-400 bg-gray-50 rounded-2xl border border-dashed border-gray-200">ไม่มี defect ที่ต้องเฝ้าระวังเป็นพิเศษ</div>}
+                  {urgentDefects.length === 0 && <div className="col-span-full py-12 text-center text-gray-400 bg-white border border-dashed border-gray-200 rounded-3xl">ไม่มี defect ที่ต้องเฝ้าระวังเป็นพิเศษ</div>}
                 </div>
               </div>
             </div>
@@ -1635,6 +1576,40 @@
 
       const UserManagementView = () => {
         const pendingUsersCount = managedUsers.filter(user => !user.approved).length;
+        const [expandedUserId, setExpandedUserId] = useState(null);
+        const [drafts, setDrafts] = useState({});
+
+        const getDraft = (user) => drafts[user.userId] || {
+          fullName: user.fullName || '',
+          password: user.password || '',
+          roleValue: user.roleValue || '',
+          position: user.position || '',
+          approved: !!user.approved,
+          email: user.email || '',
+          line: user.line || '',
+          phone: user.phone || '',
+          team: user.team || ''
+        };
+
+        const updateDraft = (userId, key, value) => {
+          setDrafts(prev => ({
+            ...prev,
+            [userId]: {
+              ...getDraft(managedUsers.find(user => user.userId === userId) || {}),
+              ...(prev[userId] || {}),
+              [key]: value
+            }
+          }));
+        };
+
+        const handleSaveManagedUserCard = (user) => {
+          handleUpdateManagedUser(user.userId, getDraft(user));
+        };
+
+        const handleApproveManagedUser = (user) => {
+          if (!window.confirm('ยืนยันการ approve user นี้ใช่หรือไม่?')) return;
+          handleUpdateManagedUser(user.userId, { ...getDraft(user), approved: true });
+        };
 
         return (
           <div className="pb-8 w-full">
@@ -1645,88 +1620,137 @@
               info={[{ value: managedUsers.length, label: 'Total Users' }, { value: pendingUsersCount, label: 'Pending Approval' }]}
             />
             <div className="max-w-7xl mx-auto px-6 md:px-8 space-y-5">
-              <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-3xl p-5 md:p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4 shadow-sm">
-                <div>
-                  <div className="text-sm font-bold text-amber-800">แจ้งเตือนผู้สมัครใหม่</div>
-                  <div className="text-3xl font-extrabold text-amber-700 mt-1">{pendingUsersCount}</div>
-                  <div className="text-sm text-amber-700/80 mt-1">ผู้ใช้ใหม่ที่รอ Admin อนุมัติสิทธิการใช้งาน</div>
-                </div>
-                <div className="flex flex-wrap gap-3">
-                  <div className="px-4 py-3 rounded-2xl bg-white border border-amber-200 min-w-[140px]">
-                    <div className="text-xs font-bold uppercase tracking-wide text-gray-500">Users ทั้งหมด</div>
-                    <div className="text-2xl font-extrabold text-gray-900 mt-1">{managedUsers.length}</div>
+              
+              {/* Alert Card แจ้งเตือนผู้ใช้ใหม่ */}
+              {pendingUsersCount > 0 && (
+                <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-3xl p-5 md:p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4 shadow-sm relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-bl-full pointer-events-none"></div>
+                  <div className="relative z-10">
+                    <div className="flex items-center gap-2">
+                      <span className="flex h-3 w-3 relative">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+                      </span>
+                      <div className="text-sm font-bold text-amber-800">แจ้งเตือนผู้สมัครใหม่</div>
+                    </div>
+                    <div className="text-3xl font-extrabold text-amber-700 mt-2">{pendingUsersCount} บัญชี</div>
+                    <div className="text-sm text-amber-700/80 mt-1">รอ Admin อนุมัติและกำหนดสิทธิการใช้งาน (ด้านล่าง)</div>
                   </div>
-                  <div className="px-4 py-3 rounded-2xl bg-white border border-amber-200 min-w-[140px]">
-                    <div className="text-xs font-bold uppercase tracking-wide text-gray-500">Approved</div>
-                    <div className="text-2xl font-extrabold text-emerald-700 mt-1">{managedUsers.filter(user => user.approved).length}</div>
+                  <div className="flex flex-wrap gap-3 relative z-10">
+                    <div className="px-4 py-3 rounded-2xl bg-white/80 backdrop-blur-sm border border-amber-200 min-w-[140px]">
+                      <div className="text-xs font-bold uppercase tracking-wide text-gray-500">Users ทั้งหมด</div>
+                      <div className="text-2xl font-extrabold text-gray-900 mt-1">{managedUsers.length}</div>
+                    </div>
+                    <div className="px-4 py-3 rounded-2xl bg-white/80 backdrop-blur-sm border border-amber-200 min-w-[140px]">
+                      <div className="text-xs font-bold uppercase tracking-wide text-gray-500">Approved</div>
+                      <div className="text-2xl font-extrabold text-emerald-700 mt-1">{managedUsers.filter(user => user.approved).length}</div>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
 
               {isUsersLoading && <div className="p-10 text-center text-gray-400 bg-white rounded-3xl border border-gray-100 shadow-sm">กำลังโหลดข้อมูลผู้ใช้งาน...</div>}
 
               {!isUsersLoading && (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-                  {managedUsers.map(user => (
-                    <div key={user.userId} className="bg-white rounded-3xl border border-gray-100 shadow-sm p-5 md:p-6 space-y-4">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <div className="text-lg font-extrabold text-gray-900 truncate">{user.fullName || user.userId}</div>
-                          <div className="text-sm text-gray-500 truncate">UserID: {user.userId}</div>
-                        </div>
-                        <span className={`px-3 py-1 rounded-full text-xs font-bold shrink-0 ${user.approved ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}`}>{user.approved ? 'Approved' : 'New User'}</span>
+                <div className="space-y-4">
+                  {managedUsers.map(user => {
+                    const draft = getDraft(user);
+                    const isExpanded = expandedUserId === user.userId;
+
+                    return (
+                      <div key={user.userId} className={`bg-white rounded-3xl border shadow-sm overflow-hidden ${user.approved ? 'border-gray-100' : 'border-amber-200'}`}>
+                        <button type="button" onClick={() => setExpandedUserId(isExpanded ? null : user.userId)} className="w-full px-5 md:px-6 py-5 flex items-start md:items-center justify-between gap-4 text-left hover:bg-gray-50 transition-colors">
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-3 flex-wrap">
+                              <div className="text-lg font-extrabold text-gray-900 truncate">{user.fullName || user.userId}</div>
+                              <span className={`px-3 py-1 rounded-full text-xs font-bold ${user.approved ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}`}>{user.approved ? 'Approved' : 'Pending Approval'}</span>
+                            </div>
+                            <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 text-sm text-gray-500">
+                              <div>UserID: {user.userId}</div>
+                              <div>Role: {user.roleValue || '-'}</div>
+                              <div>Position: {user.position || '-'}</div>
+                              <div>Team: {user.team || '-'}</div>
+                            </div>
+                          </div>
+                          <div className="text-brand-600 shrink-0 transform transition-transform" style={{ transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)' }}>
+                            <Icons.ChevronLeft />
+                          </div>
+                        </button>
+
+                        {isExpanded && (
+                          <div className="px-5 md:px-6 pb-6 border-t border-gray-100 bg-gray-50/40">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-5">
+                              <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">User ID</label>
+                                <input type="text" value={user.userId} disabled className="w-full bg-gray-100 border border-gray-200 rounded-xl p-3 text-sm text-gray-500" />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Password</label>
+                                <input type="text" value={draft.password} onChange={e => updateDraft(user.userId, 'password', e.target.value)} className="w-full bg-white border border-gray-200 rounded-xl p-3 text-sm outline-none focus:border-brand-500" />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Full Name</label>
+                                <input type="text" value={draft.fullName} onChange={e => updateDraft(user.userId, 'fullName', e.target.value)} className="w-full bg-white border border-gray-200 rounded-xl p-3 text-sm outline-none focus:border-brand-500" />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Role</label>
+                                <select value={draft.roleValue} onChange={e => updateDraft(user.userId, 'roleValue', e.target.value)} className="w-full bg-white border border-gray-200 rounded-xl p-3 text-sm outline-none focus:border-brand-500">
+                                  <option value="" disabled>-- Select Role --</option>
+                                  {USER_ROLE_OPTIONS.map(option => <option key={option} value={option}>{option}</option>)}
+                                </select>
+                              </div>
+                              <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Position</label>
+                                <select value={draft.position} onChange={e => updateDraft(user.userId, 'position', e.target.value)} className="w-full bg-white border border-gray-200 rounded-xl p-3 text-sm outline-none focus:border-brand-500">
+                                  <option value="" disabled>-- Select Position --</option>
+                                  {USER_POSITION_OPTIONS.map(option => <option key={option} value={option}>{option}</option>)}
+                                </select>
+                              </div>
+                              <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">ทีมเข้าแก้ไข</label>
+                                <select value={draft.team} onChange={e => updateDraft(user.userId, 'team', e.target.value)} className="w-full bg-white border border-gray-200 rounded-xl p-3 text-sm outline-none focus:border-brand-500">
+                                  <option value="">- ไม่ระบุทีมเข้าแก้ไข -</option>
+                                  {TEAMS.map(team => <option key={team} value={team}>{team}</option>)}
+                                </select>
+                              </div>
+                              <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Email</label>
+                                <input type="email" value={draft.email} onChange={e => updateDraft(user.userId, 'email', e.target.value)} className="w-full bg-white border border-gray-200 rounded-xl p-3 text-sm outline-none focus:border-brand-500" />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Line</label>
+                                <input type="text" value={draft.line} onChange={e => updateDraft(user.userId, 'line', e.target.value)} className="w-full bg-white border border-gray-200 rounded-xl p-3 text-sm outline-none focus:border-brand-500" />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Phone</label>
+                                <input type="text" value={draft.phone} onChange={e => updateDraft(user.userId, 'phone', e.target.value)} className="w-full bg-white border border-gray-200 rounded-xl p-3 text-sm outline-none focus:border-brand-500" />
+                              </div>
+                              <div className="md:col-span-2">
+                                <label className="flex items-center gap-3 bg-white border border-gray-200 rounded-2xl p-4 cursor-pointer">
+                                  <input type="checkbox" checked={!!draft.approved} onChange={e => updateDraft(user.userId, 'approved', e.target.checked)} className="w-4 h-4 text-brand-600 rounded border-gray-300 focus:ring-brand-500" />
+                                  <div>
+                                    <div className="text-sm font-bold text-gray-800">Approve</div>
+                                    <div className="text-xs text-gray-500">ถ้าเลือกเป็น TRUE ผู้ใช้นี้จะสามารถ log-in เข้าระบบได้</div>
+                                  </div>
+                                </label>
+                              </div>
+                            </div>
+
+                            <div className="mt-5 flex flex-col sm:flex-row justify-end gap-3">
+                              {!user.approved && (
+                                <button onClick={() => handleApproveManagedUser(user)} className="px-5 py-3 rounded-xl text-sm font-bold text-amber-800 bg-amber-100 hover:bg-amber-200 transition-colors">
+                                  ยืนยัน Approve User
+                                </button>
+                              )}
+                              <button onClick={() => handleSaveManagedUserCard(user)} className="px-5 py-3 rounded-xl text-sm font-bold text-white bg-brand-600 hover:bg-brand-700 transition-colors shadow-sm">
+                                บันทึกข้อมูลผู้ใช้งาน
+                              </button>
+                            </div>
+                          </div>
+                        )}
                       </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                        <div className="bg-gray-50 rounded-2xl p-3 border border-gray-100 sm:col-span-2">
-                          <div className="text-[11px] font-bold uppercase tracking-wide text-gray-500 mb-1">สิทธิในการใช้งาน</div>
-                          <select
-                            className="w-full bg-white border border-gray-200 rounded-xl p-2.5 text-sm outline-none"
-                            value={user.role}
-                            onChange={e => handleUpdateManagedUser(user.userId, { isAdmin: e.target.value === 'ADMIN', isStaff: e.target.value === 'STAFF', isSupplier: e.target.value === 'SUPPLIER', team: user.team || '' })}
-                          >
-                            <option value="PENDING">Pending</option>
-                            <option value="ADMIN">Admin</option>
-                            <option value="STAFF">Staff</option>
-                            <option value="SUPPLIER">Supplier</option>
-                          </select>
-                          <div className="text-xs text-gray-500 mt-2">สถานะปัจจุบัน: {ROLE_LABELS[user.role] || 'Pending Approval'}</div>
-                        </div>
-
-                        <div className="bg-gray-50 rounded-2xl p-3 border border-gray-100 sm:col-span-2">
-                          <div className="text-[11px] font-bold uppercase tracking-wide text-gray-500 mb-1">ชื่อทีมเข้าแก้ไข</div>
-                          <select
-                            className="w-full bg-white border border-gray-200 rounded-xl p-2.5 text-sm outline-none"
-                            value={user.team || ''}
-                            onChange={e => handleUpdateManagedUser(user.userId, { isAdmin: user.role === 'ADMIN', isStaff: user.role === 'STAFF', isSupplier: user.role === 'SUPPLIER', team: e.target.value })}
-                          >
-                            <option value="">- ไม่ระบุทีม -</option>
-                            {TEAMS.map(team => <option key={team} value={team}>{team}</option>)}
-                          </select>
-                        </div>
-
-                        <div className="bg-gray-50 rounded-2xl p-3 border border-gray-100">
-                          <div className="text-[11px] font-bold uppercase tracking-wide text-gray-500 mb-1">Line</div>
-                          <div className="text-gray-800 break-words">{user.line || '-'}</div>
-                        </div>
-
-                        <div className="bg-gray-50 rounded-2xl p-3 border border-gray-100">
-                          <div className="text-[11px] font-bold uppercase tracking-wide text-gray-500 mb-1">Phone</div>
-                          <div className="text-gray-800 break-words">{user.phone || '-'}</div>
-                        </div>
-
-                        <div className="bg-gray-50 rounded-2xl p-3 border border-gray-100 sm:col-span-2">
-                          <div className="text-[11px] font-bold uppercase tracking-wide text-gray-500 mb-1">Email</div>
-                          <div className="text-gray-800 break-all">{user.email || '-'}</div>
-                        </div>
-
-                        <div className="bg-gray-50 rounded-2xl p-3 border border-gray-100 sm:col-span-2">
-                          <div className="text-[11px] font-bold uppercase tracking-wide text-gray-500 mb-1">Position</div>
-                          <div className="text-gray-800">{user.position || '-'}</div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
 
@@ -1837,7 +1861,7 @@
               </div>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {jobs.map(job => (
-                  <div key={job.id} onClick={() => { setActiveJobId(job.id); setView('JOB_DETAIL'); }} className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between">
+                  <div key={job.id} onClick={() => { setActiveJobId(job.id); setView('JOB_DETAIL'); }} className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer flex flex-col justify-between">
                     <div>
                       <div className="flex justify-between items-start mb-3">
                         <StatusBadge status={job.status} size="lg" />
@@ -2041,7 +2065,7 @@
                           >
                              {/* Mobile: ลำดับ & สถานะ & จัดการ */}
                              <div className="flex justify-between items-center w-full md:hidden mb-1">
-                                <div className="text-[13px] font-bold text-gray-500 bg-gray-100 px-2.5 py-1 rounded-lg border border-gray-200">
+                                <div className="text-[13px] font-bold text-gray-500 bg-gray-100 px-2.5 py-1.5 rounded-lg border border-gray-200">
                                    #{index + 1}
                                 </div>
                                 <div className="flex items-center gap-2">
@@ -2065,7 +2089,7 @@
                              <div className="flex-1 md:px-4">
                                 <div className="text-[15px] font-bold text-gray-800 leading-snug">{defect.description}</div>
                                 <div className="flex items-center gap-2 mt-1.5">
-                                   <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">ID: {defect.id.split('-').pop()}</span>
+                                   <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">ID: {defect.id.split('-').pop()}</span>
                                    {defect.major === 'ใช่' && <span className="bg-rose-50 text-rose-700 text-[10px] font-bold px-2 py-0.5 rounded border border-rose-200">MAJOR</span>}
                                 </div>
                              </div>
@@ -2147,20 +2171,20 @@
 
                      <div className="grid grid-cols-2 md:grid-cols-4 gap-y-6 gap-x-4 bg-gray-50 rounded-2xl p-5 md:p-6 border border-gray-100">
                         <div className="flex flex-col border-r border-gray-200 pr-2">
-                           <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">ลักษณะงาน</span>
+                           <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1">ลักษณะงาน</span>
                            <span className="text-sm md:text-base font-bold text-gray-800 truncate" title={activeDefect?.mainCategory}>{activeDefect?.mainCategory}</span>
                            <span className="text-[11px] md:text-xs text-gray-500 mt-0.5 truncate" title={activeDefect?.subCategory}>{activeDefect?.subCategory}</span>
                         </div>
                         <div className="flex flex-col md:border-r border-gray-200 px-2">
-                           <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">ทีมเข้าแก้ไข</span>
+                           <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1">ทีมเข้าแก้ไข</span>
                            <span className="text-sm md:text-base font-bold text-gray-800">{activeDefect?.team}</span>
                         </div>
                         <div className="flex flex-col border-r border-gray-200 px-2 mt-4 md:mt-0 pt-4 md:pt-0 border-t md:border-t-0">
-                           <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">เข้าแก้ไข</span>
+                           <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1">เข้าแก้ไข</span>
                            <span className="text-sm md:text-base font-bold text-gray-800">{activeDefect?.targetStartDate || '-'}</span>
                         </div>
                         <div className="flex flex-col px-2 mt-4 md:mt-0 pt-4 md:pt-0 border-t md:border-t-0">
-                           <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">เสร็จสิ้น</span>
+                           <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1">เสร็จสิ้น</span>
                            <span className="text-sm md:text-base font-bold text-gray-800">{activeDefect?.targetEndDate || '-'}</span>
                         </div>
                      </div>
@@ -2195,7 +2219,7 @@
               <h2 className="text-center text-3xl font-extrabold text-gray-900">{authMode === 'LOGIN' ? 'Welcome Back' : 'Create Account'}</h2>
               <p className="text-sm text-gray-500 mt-1">SAS Defect Management System</p>
             </div>
-            <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md relative z-10">
+            <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md relative z-10 max-h-[calc(100vh-9rem)] overflow-y-auto pr-1">
               <div className="bg-white py-8 px-4 shadow-xl shadow-brand-100/50 sm:rounded-3xl border border-gray-100 sm:px-10">
                 <form className="space-y-5" onSubmit={handleAuthSubmit}>
                   {authError && <div className="bg-rose-50 border-l-4 border-rose-500 p-3 rounded-md text-sm text-rose-700 font-medium">{authError}</div>}
@@ -2216,15 +2240,15 @@
                         </div>
                       </div>
                       <div>
-                        <label className="block text-sm font-semibold text-gray-700">Position</label>
+                        <label className="block text-sm font-semibold text-gray-700">Role</label>
                         <div className="mt-1 relative rounded-xl shadow-sm">
                           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400"><Icons.Briefcase /></div>
-                          <select required value={authForm.position} onChange={e => setAuthForm({...authForm, position: e.target.value})} className="block w-full pl-10 pr-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-brand-500 text-sm">
-                            <option value="" disabled>-- Select Position --</option>{POSITIONS.map(p => <option key={p} value={p}>{p}</option>)}
+                          <select required value={authForm.roleValue} onChange={e => setAuthForm({...authForm, roleValue: e.target.value})} className="block w-full pl-10 pr-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-brand-500 text-sm">
+                            <option value="" disabled>-- Select Role --</option>{USER_ROLE_OPTIONS.map(p => <option key={p} value={p}>{p}</option>)}
                           </select>
                         </div>
                       </div>
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm font-semibold text-gray-700">Email</label>
                           <div className="mt-1 relative"><div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400"><Icons.Mail /></div><input type="email" value={authForm.email} onChange={e => setAuthForm({...authForm, email: e.target.value})} className="block w-full pl-10 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm" /></div>
@@ -2292,6 +2316,9 @@
               {view === 'JOB_DETAIL' && <JobDetail />}
               {view === 'TASK_DETAIL' && <TaskDetail />}
               {view === 'DEFECT_DETAIL' && <DefectDetail />}
+              {view === 'USER_MANAGEMENT' && <UserManagementView />}
+              {view === 'PROFILE_SETTINGS' && <ProfileSettingsView />}
+              {view === 'SUPPLIER_DEFECTS' && <SupplierDefectsView />}
             </main>
             
             {showJobForm && <JobModal />}
