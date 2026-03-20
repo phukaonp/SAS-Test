@@ -48,21 +48,28 @@ function normalizeAllowedValue_(value, allowedValues, fieldLabel, allowBlank) {
     if (allowBlank) return '';
     throw new Error(fieldLabel + ' ไม่สามารถเว้นว่างได้');
   }
-  if (allowedValues.indexOf(text) === -1) {
+  if (allowedValues.length > 0 && allowedValues.indexOf(text) === -1) {
     throw new Error(fieldLabel + ' ไม่ถูกต้อง');
   }
   return text;
 }
 
 function getUserTeamOptions_() {
-  return USER_TEAM_OPTIONS.slice();
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet = ss.getSheetByName('Team');
+  if (!sheet) return [];
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return [];
+  // ดึงข้อมูลจาก Sheet Team คอลัมน์ C (Index 3) แถวที่ 2 เป็นต้นไป
+  const data = sheet.getRange(2, 3, lastRow - 1, 1).getDisplayValues();
+  return [...new Set(data.map(r => String(r[0]).trim()).filter(t => t !== ''))];
 }
 
 function ensureAdminAccount_() {
   const sheet = getUserSheet_();
   const data = sheet.getDataRange().getValues();
   for (let i = 1; i < data.length; i++) {
-    if (String(data[i][0]).trim() === 'phukao') {
+    if (String(data[i][0]).trim().toLowerCase() === 'phukao') {
       sheet.getRange(i + 1, 2).setValue("'555559");
       sheet.getRange(i + 1, 7).setValue(true); // Col G: Approved
       sheet.getRange(i + 1, 5).setValue('SAS Staff'); // Col E: Role
@@ -90,9 +97,11 @@ function buildUserObject_(row, rowIndex) {
   const position = String(row[5] || '').trim();
   const approved = normalizeBoolean_(row[6]);
   
-  const isAdmin = position === 'Admin';
-  const isStaff = position === 'Staff';
-  const isSupplier = position === 'Supplier';
+  // แปลงให้เป็นพิมพ์เล็กทั้งหมด เพื่อป้องกันปัญหา Case Sensitive เวลาล็อกอิน
+  const posLower = position.toLowerCase();
+  const isAdmin = posLower === 'admin';
+  const isStaff = posLower === 'staff' || posLower === 'sas staff';
+  const isSupplier = posLower === 'supplier';
   
   const fullName = String(row[2] || '').trim() || String(row[0] || '').trim();
   let role = 'PENDING';
@@ -115,7 +124,7 @@ function buildUserObject_(row, rowIndex) {
     email: String(row[9] || '').trim(),
     line: String(row[10] || '').trim(),
     phone: String(row[11] || '').trim(),
-    team: String(row[12] || '').trim(),
+    team: String(row[12] || '').trim(), // ดึงข้อมูล Col M อย่างถูกต้อง
     timestamp: row[13] || row[14] || '',
     sheetValues: {
       role: roleValue,
@@ -129,9 +138,9 @@ function buildUserObject_(row, rowIndex) {
 function getUserRowByUserId_(userId) {
   const sheet = getUserSheet_();
   const data = sheet.getDataRange().getValues();
-  const inputUserId = String(userId || '').trim();
+  const inputUserId = String(userId || '').trim().toLowerCase(); // เปลี่ยนเป็น toLowerCase ป้องกัน Case Sensitive
   for (let i = 1; i < data.length; i++) {
-    if (String(data[i][0]).trim() === inputUserId) {
+    if (String(data[i][0]).trim().toLowerCase() === inputUserId) {
       return {
         sheet: sheet,
         rowIndex: i + 1,
@@ -145,7 +154,7 @@ function getUserRowByUserId_(userId) {
 
 function assertAdmin_(actingUserId) {
   ensureAdminAccount_();
-  if (String(actingUserId || '').trim() === 'phukao') return;
+  if (String(actingUserId || '').trim().toLowerCase() === 'phukao') return;
   const found = getUserRowByUserId_(actingUserId);
   if (!found || !found.user.isAdmin) {
     throw new Error('ไม่มีสิทธิ์ใช้งานส่วนนี้');
@@ -521,6 +530,17 @@ function getMasterData() {
       const mData = mainDefectSheet.getRange(2, 2, mLastRow - 1, 1).getDisplayValues();
       const mCategories = mData.map(r => r[0].toString().trim()).filter(c => c !== '');
       result.mainCategories = [...new Set(mCategories)];
+    }
+  }
+
+  const teamSheet = ss.getSheetByName('Team');
+  if (teamSheet) {
+    const tLastRow = teamSheet.getLastRow();
+    if (tLastRow >= 2) {
+      // ดึงข้อมูลจาก Column C (Index 3) ของ Sheet Team
+      const tData = teamSheet.getRange(2, 3, tLastRow - 1, 1).getDisplayValues();
+      const teamsList = tData.map(r => r[0].toString().trim()).filter(t => t !== '');
+      result.teams = [...new Set(teamsList)];
     }
   }
 
@@ -1166,10 +1186,10 @@ function registerUser(formData) {
   const sheet = getUserSheet_();
   
   const data = sheet.getDataRange().getValues();
-  const inputUserId = String(formData.userId).trim();
+  const inputUserId = String(formData.userId).trim().toLowerCase(); // เปลี่ยนเป็น toLowerCase
 
   for (let i = 1; i < data.length; i++) {
-    if (String(data[i][0]).trim() === inputUserId) {
+    if (String(data[i][0]).trim().toLowerCase() === inputUserId) {
       throw new Error('User ID นี้มีผู้ใช้งานแล้ว กรุณาใช้ชื่ออื่น');
     }
   }
@@ -1177,7 +1197,7 @@ function registerUser(formData) {
   const roleValue = normalizeAllowedValue_(formData.roleValue, USER_ROLE_OPTIONS, 'Role', false);
 
   const newRow = new Array(15).fill('');
-  newRow[0] = formData.userId;
+  newRow[0] = String(formData.userId).trim(); // บันทึกตามที่พิมพ์ (เผื่อผู้ใช้พิมพ์ตัวเล็กตัวใหญ่ผสมกัน)
   newRow[1] = "'" + formData.password; // เติม ' นำหน้า Password บังคับให้เป็น Text
   newRow[2] = formData.fullName || formData.userId;
   newRow[4] = roleValue;
@@ -1190,6 +1210,7 @@ function registerUser(formData) {
   newRow[13] = new Date();
 
   sheet.appendRow(newRow);
+  SpreadsheetApp.flush(); // บังคับให้ระบบเขียนข้อมูลลง Sheet ทันที
   
   return 'Success';
 }
@@ -1202,11 +1223,11 @@ function loginUser(userId, password) {
 
   const data = sheet.getDataRange().getValues();
   
-  const inputUserId = String(userId).trim();
+  const inputUserId = String(userId).trim().toLowerCase(); // เปลี่ยนเป็น toLowerCase ป้องกัน Case Sensitive
   const inputPassword = String(password).trim();
 
   for (let i = 1; i < data.length; i++) {
-    const sheetUserId = String(data[i][0]).trim();
+    const sheetUserId = String(data[i][0]).trim().toLowerCase(); // เปลี่ยนเป็น toLowerCase เพื่อเปรียบเทียบ
     let sheetPassword = String(data[i][1]).trim();
 
     if (sheetPassword.startsWith("'")) {
@@ -1291,6 +1312,8 @@ function updateManagedUser(actingUserId, payload) {
   found.sheet.getRange(found.rowIndex, USER_SHEET_COLUMNS.LINE).setValue(line);
   found.sheet.getRange(found.rowIndex, USER_SHEET_COLUMNS.PHONE).setValue(phone);
   found.sheet.getRange(found.rowIndex, USER_SHEET_COLUMNS.TEAM).setValue(teamValue);
+
+  SpreadsheetApp.flush(); // บังคับให้บันทึกลง Sheet ทันที เพื่อให้ตั้งค่า Approved มีผลกับการ Login ทันที
 
   return JSON.stringify(buildUserObject_(found.sheet.getRange(found.rowIndex, 1, 1, 15).getValues()[0], found.rowIndex));
 }
