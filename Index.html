@@ -1017,9 +1017,122 @@
           .withFailureHandler((err) => { setIsExportingPDF(false); alert('Error: ' + err.message); }).exportDefectReportToPDF(taskId);
       };
 
+      const handleAuthSubmit = (e) => {
+        e.preventDefault();
+        setAuthError('');
+
+        if (!authForm.userId.trim() || !authForm.password.trim()) {
+          setAuthError('กรุณากรอก User ID และ Password');
+          return;
+        }
+
+        if (authMode === 'REGISTER') {
+          if (!authForm.fullName.trim()) {
+            setAuthError('กรุณากรอกชื่อ - นามสกุล');
+            return;
+          }
+          if (!authForm.roleValue) {
+            setAuthError('กรุณาเลือก Role');
+            return;
+          }
+          if (authForm.password !== authForm.confirmPassword) {
+            setAuthError('Password และ Confirm Password ไม่ตรงกัน');
+            return;
+          }
+        }
+
+        setAuthLoading(true);
+
+        if (authMode === 'LOGIN') {
+          google.script.run
+            .withSuccessHandler(user => {
+              sessionStorage.setItem('sas_user', JSON.stringify(user));
+              setCurrentUser(user);
+              setProfileForm({
+                fullName: user.fullName || '',
+                email: user.email || '',
+                line: user.line || '',
+                phone: user.phone || ''
+              });
+              setView(user?.isSupplier && !user?.isAdmin && !user?.isStaff ? 'SUPPLIER_DEFECTS' : 'DASHBOARD');
+              setAuthLoading(false);
+            })
+            .withFailureHandler(err => {
+              setAuthError(err.message || 'ไม่สามารถเข้าสู่ระบบได้');
+              setAuthLoading(false);
+            })
+            .loginUser(authForm.userId, authForm.password);
+          return;
+        }
+
+        google.script.run
+          .withSuccessHandler(() => {
+            setAuthLoading(false);
+            alert('ลงทะเบียนสำเร็จ กรุณารอผู้ดูแลระบบอนุมัติสิทธิ์ก่อนเข้าใช้งาน');
+            setAuthMode('LOGIN');
+            setAuthForm({ userId: authForm.userId, password: '', confirmPassword: '', fullName: '', roleValue: '', email: '', line: '', phone: '' });
+          })
+          .withFailureHandler(err => {
+            setAuthError(err.message || 'ไม่สามารถลงทะเบียนได้');
+            setAuthLoading(false);
+          })
+          .registerUser({
+            userId: authForm.userId,
+            password: authForm.password,
+            fullName: authForm.fullName,
+            roleValue: authForm.roleValue,
+            email: authForm.email,
+            line: authForm.line,
+            phone: authForm.phone
+          });
+      };
+
+      const handleUpdateManagedUser = (userId, payload) => {
+        if (!currentUser?.userId) return;
+        setIsSaving(true);
+        google.script.run
+          .withSuccessHandler(updatedUserJson => {
+            const updatedUser = JSON.parse(updatedUserJson);
+            setManagedUsers(prev => prev.map(user => user.userId === userId ? updatedUser : user));
+            if (currentUser?.userId === userId) {
+              sessionStorage.setItem('sas_user', JSON.stringify(updatedUser));
+              setCurrentUser(updatedUser);
+            }
+            setIsSaving(false);
+          })
+          .withFailureHandler(err => {
+            alert('เกิดข้อผิดพลาดในการบันทึกข้อมูลผู้ใช้งาน: ' + err.message);
+            setIsSaving(false);
+          })
+          .updateManagedUser(currentUser.userId, { userId, ...payload });
+      };
+
+      const handleSaveProfile = () => {
+        if (!currentUser?.userId) return;
+        setIsSaving(true);
+        google.script.run
+          .withSuccessHandler(user => {
+            sessionStorage.setItem('sas_user', JSON.stringify(user));
+            setCurrentUser(user);
+            setProfileForm({
+              fullName: user.fullName || '',
+              email: user.email || '',
+              line: user.line || '',
+              phone: user.phone || ''
+            });
+            setIsSaving(false);
+          })
+          .withFailureHandler(err => {
+            alert('เกิดข้อผิดพลาดในการบันทึกข้อมูลโปรไฟล์: ' + err.message);
+            setIsSaving(false);
+          })
+          .updateUserProfile(currentUser.userId, profileForm);
+      };
+
       // --- Modals ---
       const JobModal = () => {
         const isEditMode = !!editingJob;
+        
         const [formData, setFormData] = useState({ 
           id: editingJob ? editingJob.id : '',
           site: editingJob ? editingJob.site : (uniqueSites[0] || ''), 
