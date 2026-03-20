@@ -414,52 +414,6 @@ function addDefect(taskId, defectData) {
   return newId;
 }
 
-// ยังคงเก็บฟังก์ชันเดิมไว้เผื่อกรณีต้องการใช้ (ไม่กระทบการทำงานใหม่)
-function uploadDefectImages(defectId, imagesPayload) {
-  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const sheet = ss.getSheetByName('DEFECT');
-  const data = sheet.getDataRange().getValues();
-  
-  let rowIndex = -1;
-  for (let i = 1; i < data.length; i++) {
-    if (data[i][0] === defectId) {
-      rowIndex = i + 1;
-      break;
-    }
-  }
-  if (rowIndex === -1) return "Defect not found";
-
-  function uploadBase64(base64Str, filename) {
-    if (!base64Str) return '';
-    if (base64Str.startsWith('http')) return base64Str; 
-    try {
-      const splitBase = base64Str.split(',');
-      const contentType = splitBase[0].split(';')[0].replace('data:', '');
-      const byteCharacters = Utilities.base64Decode(splitBase[1]);
-      const blob = Utilities.newBlob(byteCharacters, contentType, filename);
-      const file = DriveApp.createFile(blob);
-      file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-      return file.getUrl();
-    } catch (e) {
-      return '';
-    }
-  }
-
-  const ts = new Date().getTime();
-  
-  const imgUnitUrl = imagesPayload.imgUnit ? uploadBase64(imagesPayload.imgUnit, `Unit_${defectId}_${ts}`) : data[rowIndex-1][10];
-  const imgBeforeUrl = imagesPayload.imgBefore ? uploadBase64(imagesPayload.imgBefore, `Before_${defectId}_${ts}`) : data[rowIndex-1][11];
-  const imgDuringUrl = imagesPayload.imgDuring ? uploadBase64(imagesPayload.imgDuring, `During_${defectId}_${ts}`) : data[rowIndex-1][12];
-  const imgAfterUrl = imagesPayload.imgAfter ? uploadBase64(imagesPayload.imgAfter, `After_${defectId}_${ts}`) : data[rowIndex-1][13];
-
-  sheet.getRange(rowIndex, 11).setValue(imgUnitUrl);
-  sheet.getRange(rowIndex, 12).setValue(imgBeforeUrl);
-  sheet.getRange(rowIndex, 13).setValue(imgDuringUrl);
-  sheet.getRange(rowIndex, 14).setValue(imgAfterUrl);
-
-  return "Success";
-}
-
 function updateJob(formData) {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const sheet = ss.getSheetByName('JOB');
@@ -1210,7 +1164,6 @@ function registerUser(formData) {
   const data = sheet.getDataRange().getValues();
   const inputUserId = String(formData.userId).trim();
 
-
   // เช็คว่า User ID ซ้ำหรือไม่
   for (let i = 1; i < data.length; i++) {
     if (String(data[i][0]).trim() === inputUserId) {
@@ -1244,7 +1197,6 @@ function loginUser(userId, password) {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const sheet = ss.getSheetByName('User');
   if (!sheet) throw new Error('ไม่พบฐานข้อมูลผู้ใช้งาน กรุณาติดต่อผู้ดูแลระบบ');
-
 
   const data = sheet.getDataRange().getValues();
   
@@ -1313,14 +1265,15 @@ function updateManagedUser(actingUserId, payload) {
   const found = getUserRowByUserId_(payload.userId);
   if (!found) throw new Error('ไม่พบข้อมูลผู้ใช้งาน');
 
+  // อ่านค่า Checkbox ตรงๆ จาก payload เพื่อให้เลือกได้อย่างอิสระตามหน้าจอ
   const isAdmin = !!payload.isAdmin;
-  const isStaff = !isAdmin && !!payload.isStaff;
-  const isSupplier = !isAdmin && !isStaff && !!payload.isSupplier;
+  const isStaff = !!payload.isStaff;
+  const isSupplier = !!payload.isSupplier;
 
-  found.sheet.getRange(found.rowIndex, 6).setValue(isAdmin);
-  found.sheet.getRange(found.rowIndex, 7).setValue(isStaff);
-  found.sheet.getRange(found.rowIndex, 8).setValue(isSupplier);
-  found.sheet.getRange(found.rowIndex, 14).setValue(payload.team || '');
+  found.sheet.getRange(found.rowIndex, 6).setValue(isAdmin); // Col F
+  found.sheet.getRange(found.rowIndex, 7).setValue(isStaff); // Col G
+  found.sheet.getRange(found.rowIndex, 8).setValue(isSupplier); // Col H
+  found.sheet.getRange(found.rowIndex, 14).setValue(payload.team || ''); // Col N
 
   return JSON.stringify(buildUserObject_(found.sheet.getRange(found.rowIndex, 1, 1, 15).getValues()[0], found.rowIndex));
 }
