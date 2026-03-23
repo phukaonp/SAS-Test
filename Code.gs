@@ -170,7 +170,7 @@ function initSheets() {
       'VOSteps', 'ActualStartDate', 'ActualEndDate', 'Remark' 
     ],
     // อัปเดต Header ของ Sheet User ให้ตรงกับโครงสร้างใหม่
-    'User': ['UserID', 'Password', 'FullName', '', 'Role', 'Position', 'Approved', '', '', 'Email', 'Line', 'Phone', 'Team', 'Timestamp', ''],
+    'User': ['UserID', 'Password', 'FullName', '', 'Role', 'Position', 'Approved', '', 'Email', 'Line', 'Phone', '', 'Team', 'Timestamp'],
     'MainDefect': ['ID', 'MainCategory_Name'],
     'SecondaryDefect': ['ID', 'MainCategory_Ref', 'SubCategory_Name'] // แก้ไขตัวสะกด
   };
@@ -1185,6 +1185,9 @@ function registerUser(formData) {
   
   const data = sheet.getDataRange().getValues();
   const inputUserId = String(formData.userId).trim().toLowerCase(); // เปลี่ยนเป็น toLowerCase
+  const fullName = String(formData.fullName || '').trim();
+  const password = String(formData.password || '').trim();
+  const confirmPassword = String(formData.confirmPassword == null ? formData.password : formData.confirmPassword).trim();
 
   for (let i = 1; i < data.length; i++) {
     if (String(data[i][0]).trim().toLowerCase() === inputUserId) {
@@ -1192,18 +1195,26 @@ function registerUser(formData) {
     }
   }
 
+  if (!inputUserId) throw new Error('กรุณากรอก User ID');
+  if (!fullName) throw new Error('กรุณากรอกชื่อ - นามสกุล');
+  if (!password) throw new Error('กรุณากรอก Password');
+  if (!confirmPassword) throw new Error('กรุณากรอก Confirm Password');
+  if (password !== confirmPassword) {
+    throw new Error('Password และ Confirm Password ไม่ตรงกัน');
+  }
+
   const roleValue = normalizeAllowedValue_(formData.roleValue, USER_ROLE_OPTIONS, 'Role', false);
 
   const newRow = new Array(15).fill('');
   newRow[0] = String(formData.userId).trim(); // บันทึกตามที่พิมพ์ (เผื่อผู้ใช้พิมพ์ตัวเล็กตัวใหญ่ผสมกัน)
-  newRow[1] = "'" + formData.password; // เติม ' นำหน้า Password บังคับให้เป็น Text
-  newRow[2] = formData.fullName || formData.userId;
+  newRow[1] = "'" + confirmPassword;
+  newRow[2] = fullName;
   newRow[4] = roleValue;
   newRow[5] = '';
   newRow[6] = false;
-  newRow[8] = formData.email || '';     // Col I: Email
-  newRow[9] = formData.line || '';      // Col J: Line
-  newRow[10] = formData.phone || '';    // Col K: Phone
+  newRow[8] = String(formData.email || '').trim();
+  newRow[9] = String(formData.line || '').trim();
+  newRow[10] = String(formData.phone || '').trim();
   newRow[12] = '';
   newRow[13] = new Date();
 
@@ -1215,8 +1226,7 @@ function registerUser(formData) {
 
 function loginUser(userId, password) {
   ensureAdminAccount_();
-  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const sheet = ss.getSheetByName('User');
+  const sheet = getUserSheet_();
   if (!sheet) throw new Error('ไม่พบฐานข้อมูลผู้ใช้งาน กรุณาติดต่อผู้ดูแลระบบ');
 
   const data = sheet.getDataRange().getValues();
@@ -1256,12 +1266,45 @@ function updateUserProfile(userId, profileData) {
   const found = getUserRowByUserId_(userId);
   if (!found) throw new Error('ไม่พบข้อมูลผู้ใช้งาน');
 
-  found.sheet.getRange(found.rowIndex, USER_SHEET_COLUMNS.FULL_NAME).setValue(profileData.fullName || '');
-  found.sheet.getRange(found.rowIndex, USER_SHEET_COLUMNS.EMAIL).setValue(profileData.email || '');
-  found.sheet.getRange(found.rowIndex, USER_SHEET_COLUMNS.LINE).setValue(profileData.line || '');
-  found.sheet.getRange(found.rowIndex, USER_SHEET_COLUMNS.PHONE).setValue(profileData.phone || '');
+  const fullName = String(profileData.fullName || '').trim();
+  const email = String(profileData.email || '').trim();
+  const line = String(profileData.line || '').trim();
+  const phone = String(profileData.phone || '').trim();
+  const password = String(profileData.password || '').trim();
+  const confirmPassword = String(profileData.confirmPassword || '').trim();
+
+  if (!fullName) throw new Error('ชื่อ - นามสกุล ไม่สามารถเว้นว่างได้');
+  if ((password || confirmPassword) && password !== confirmPassword) {
+    throw new Error('Password และ Confirm Password ไม่ตรงกัน');
+  }
+
+  found.sheet.getRange(found.rowIndex, USER_SHEET_COLUMNS.FULL_NAME).setValue(fullName);
+  found.sheet.getRange(found.rowIndex, USER_SHEET_COLUMNS.EMAIL).setValue(email);
+  found.sheet.getRange(found.rowIndex, USER_SHEET_COLUMNS.LINE).setValue(line);
+  found.sheet.getRange(found.rowIndex, USER_SHEET_COLUMNS.PHONE).setValue(phone);
+  if (password) {
+    found.sheet.getRange(found.rowIndex, USER_SHEET_COLUMNS.PASSWORD).setValue("'" + password);
+  }
+
+  SpreadsheetApp.flush();
 
   return getCurrentUserProfile(userId);
+}
+
+function addManagedUser(actingUserId, payload) {
+  assertAdmin_(actingUserId);
+  if (!payload) throw new Error('ไม่พบข้อมูลผู้ใช้งาน');
+
+  return registerUser({
+    userId: payload.userId,
+    fullName: payload.fullName,
+    roleValue: payload.roleValue,
+    password: payload.password,
+    confirmPassword: payload.confirmPassword,
+    email: payload.email,
+    line: payload.line,
+    phone: payload.phone
+  });
 }
 
 function getUsersForManagement(actingUserId) {
@@ -1287,6 +1330,7 @@ function updateManagedUser(actingUserId, payload) {
 
   const fullName = String(payload.fullName == null ? found.user.fullName : payload.fullName).trim();
   const password = String(payload.password == null ? found.user.password : payload.password).trim();
+  const confirmPassword = String(payload.confirmPassword == null ? payload.password : payload.confirmPassword).trim();
   const roleValue = normalizeAllowedValue_(payload.roleValue == null ? found.user.roleValue : payload.roleValue, USER_ROLE_OPTIONS, 'Role', false);
   const positionValue = normalizeAllowedValue_(payload.position == null ? found.user.position : payload.position, USER_POSITION_OPTIONS, 'Position', false);
   const approved = normalizeBoolean_(payload.approved == null ? found.user.approved : payload.approved);
@@ -1297,11 +1341,14 @@ function updateManagedUser(actingUserId, payload) {
 
   if (!fullName) throw new Error('Full Name ไม่สามารถเว้นว่างได้');
   if (!password) throw new Error('Password ไม่สามารถเว้นว่างได้');
+  if (password !== confirmPassword) {
+    throw new Error('Password และ Confirm Password ไม่ตรงกัน');
+  }
   if (positionValue === 'Supplier' && !teamValue) {
     throw new Error('กรุณาเลือกทีมเข้าแก้ไขสำหรับผู้ใช้ Supplier');
   }
 
-  found.sheet.getRange(found.rowIndex, USER_SHEET_COLUMNS.PASSWORD).setValue("'" + password);
+  found.sheet.getRange(found.rowIndex, USER_SHEET_COLUMNS.PASSWORD).setValue("'" + confirmPassword);
   found.sheet.getRange(found.rowIndex, USER_SHEET_COLUMNS.FULL_NAME).setValue(fullName);
   found.sheet.getRange(found.rowIndex, USER_SHEET_COLUMNS.ROLE).setValue(roleValue);
   found.sheet.getRange(found.rowIndex, USER_SHEET_COLUMNS.POSITION).setValue(positionValue);
@@ -1314,4 +1361,20 @@ function updateManagedUser(actingUserId, payload) {
   SpreadsheetApp.flush(); // บังคับให้บันทึกลง Sheet ทันที เพื่อให้ตั้งค่า Approved มีผลกับการ Login ทันที
 
   return JSON.stringify(buildUserObject_(found.sheet.getRange(found.rowIndex, 1, 1, 15).getValues()[0], found.rowIndex));
+}
+
+function deleteManagedUser(actingUserId, targetUserId) {
+  assertAdmin_(actingUserId);
+  const found = getUserRowByUserId_(targetUserId);
+  if (!found) throw new Error('ไม่พบข้อมูลผู้ใช้งาน');
+  if (String(found.user.userId || '').trim().toLowerCase() === 'phukao') {
+    throw new Error('ไม่สามารถลบบัญชีผู้ดูแลระบบหลักได้');
+  }
+  if (String(actingUserId || '').trim().toLowerCase() === String(targetUserId || '').trim().toLowerCase()) {
+    throw new Error('ไม่สามารถลบบัญชีที่กำลังใช้งานอยู่ได้');
+  }
+
+  found.sheet.deleteRow(found.rowIndex);
+  SpreadsheetApp.flush();
+  return 'Success';
 }
