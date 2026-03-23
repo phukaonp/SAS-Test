@@ -5,12 +5,15 @@ const USER_SHEET_COLUMNS = {
   USER_ID: 1,
   PASSWORD: 2,
   FULL_NAME: 3,
+  // Col D(4) = Name (unused)
   ROLE: 5,
   POSITION: 6,
   APPROVED: 7,
-  EMAIL: 10,
-  LINE: 11,
-  PHONE: 12,
+  // Col H(8) = SiteResponsible (unused)
+  EMAIL: 9,
+  LINE: 10,
+  PHONE: 11,
+  // Col L(12) = reserved
   TEAM: 13,
   TIMESTAMP: 14
 };
@@ -48,45 +51,37 @@ function normalizeAllowedValue_(value, allowedValues, fieldLabel, allowBlank) {
     if (allowBlank) return '';
     throw new Error(fieldLabel + ' ไม่สามารถเว้นว่างได้');
   }
-  if (allowedValues.length > 0 && allowedValues.indexOf(text) === -1) {
+  if (allowedValues.indexOf(text) === -1) {
     throw new Error(fieldLabel + ' ไม่ถูกต้อง');
   }
   return text;
 }
 
 function getUserTeamOptions_() {
-  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const sheet = ss.getSheetByName('Team');
-  if (!sheet) return [];
-  const lastRow = sheet.getLastRow();
-  if (lastRow < 2) return [];
-  // ดึงข้อมูลจาก Sheet Team คอลัมน์ C (Index 3) แถวที่ 2 เป็นต้นไป
-  const data = sheet.getRange(2, 3, lastRow - 1, 1).getDisplayValues();
-  return [...new Set(data.map(r => String(r[0]).trim()).filter(t => t !== ''))];
+  return USER_TEAM_OPTIONS.slice();
 }
 
 function ensureAdminAccount_() {
   const sheet = getUserSheet_();
   const data = sheet.getDataRange().getValues();
   for (let i = 1; i < data.length; i++) {
-    if (String(data[i][0]).trim().toLowerCase() === 'phukao') {
+    if (String(data[i][0]).trim() === 'phukao') {
       sheet.getRange(i + 1, 2).setValue("'555559");
-      sheet.getRange(i + 1, 7).setValue(true); // Col G: Approved
-      sheet.getRange(i + 1, 5).setValue('SAS Staff'); // Col E: Role
-      sheet.getRange(i + 1, 6).setValue('Admin'); // Col F: Position
+      sheet.getRange(i + 1, 7).setValue(true);
+      sheet.getRange(i + 1, 5).setValue('SAS Staff');
+      sheet.getRange(i + 1, 6).setValue('Admin');
       if (!String(data[i][2] || '').trim()) sheet.getRange(i + 1, 3).setValue('phukao');
       return;
     }
   }
-
-  const newRow = new Array(15).fill('');
+  const newRow = new Array(14).fill('');
   newRow[0] = 'phukao';
   newRow[1] = "'555559";
   newRow[2] = 'phukao';
-  newRow[4] = 'SAS Staff'; // Col E: Role
-  newRow[5] = 'Admin';     // Col F: Position
-  newRow[6] = true;        // Col G: Approved
-  newRow[13] = new Date(); // Col N: Timestamp
+  newRow[4] = 'SAS Staff';
+  newRow[5] = 'Admin';
+  newRow[6] = true;
+  newRow[13] = new Date();
   sheet.appendRow(newRow);
 }
 
@@ -121,15 +116,18 @@ function buildUserObject_(row, rowIndex) {
     isSupplier: isSupplier,
     role: role,
     approved: approved,
-    email: String(row[9] || '').trim(),
-    line: String(row[10] || '').trim(),
-    phone: String(row[11] || '').trim(),
-    team: String(row[12] || '').trim(), // ดึงข้อมูล Col M อย่างถูกต้อง
+    email: String(row[8] || '').trim(),
+    line: String(row[9] || '').trim(),
+    phone: String(row[10] || '').trim(),
+    team: String(row[12] || '').trim(),
     timestamp: row[13] || row[14] || '',
     sheetValues: {
       role: roleValue,
       position: position,
       approved: approved,
+      email: String(row[8] || '').trim(),
+      line: String(row[9] || '').trim(),
+      phone: String(row[10] || '').trim(),
       team: String(row[12] || '').trim()
     }
   };
@@ -138,7 +136,7 @@ function buildUserObject_(row, rowIndex) {
 function getUserRowByUserId_(userId) {
   const sheet = getUserSheet_();
   const data = sheet.getDataRange().getValues();
-  const inputUserId = String(userId || '').trim().toLowerCase(); // เปลี่ยนเป็น toLowerCase ป้องกัน Case Sensitive
+  const inputUserId = String(userId || '').trim().toLowerCase();
   for (let i = 1; i < data.length; i++) {
     if (String(data[i][0]).trim().toLowerCase() === inputUserId) {
       return {
@@ -1203,9 +1201,9 @@ function registerUser(formData) {
   newRow[4] = roleValue;
   newRow[5] = '';
   newRow[6] = false;
-  newRow[9] = formData.email;          // Col J: Email
-  newRow[10] = formData.line;          // Col K: Line
-  newRow[11] = formData.phone;         // Col L: Phone
+  newRow[8] = formData.email || '';     // Col I: Email
+  newRow[9] = formData.line || '';      // Col J: Line
+  newRow[10] = formData.phone || '';    // Col K: Phone
   newRow[12] = '';
   newRow[13] = new Date();
 
@@ -1258,10 +1256,10 @@ function updateUserProfile(userId, profileData) {
   const found = getUserRowByUserId_(userId);
   if (!found) throw new Error('ไม่พบข้อมูลผู้ใช้งาน');
 
-  found.sheet.getRange(found.rowIndex, 3).setValue(profileData.fullName || '');
-  found.sheet.getRange(found.rowIndex, 10).setValue(profileData.email || '');
-  found.sheet.getRange(found.rowIndex, 11).setValue(profileData.line || '');
-  found.sheet.getRange(found.rowIndex, 12).setValue(profileData.phone || '');
+  found.sheet.getRange(found.rowIndex, USER_SHEET_COLUMNS.FULL_NAME).setValue(profileData.fullName || '');
+  found.sheet.getRange(found.rowIndex, USER_SHEET_COLUMNS.EMAIL).setValue(profileData.email || '');
+  found.sheet.getRange(found.rowIndex, USER_SHEET_COLUMNS.LINE).setValue(profileData.line || '');
+  found.sheet.getRange(found.rowIndex, USER_SHEET_COLUMNS.PHONE).setValue(profileData.phone || '');
 
   return getCurrentUserProfile(userId);
 }
