@@ -20,7 +20,6 @@ const USER_SHEET_COLUMNS = {
 
 const USER_ROLE_OPTIONS = ['SAS Staff', 'Supplier'];
 const USER_POSITION_OPTIONS = ['Admin', 'Staff', 'Supplier'];
-const USER_TEAM_OPTIONS = ['ทีมช่างสี (Internal)', 'ทีมช่างไฟ (Internal)', 'Supplier A (โครงสร้าง)', 'Supplier B (ประปา)'];
 
 function doGet() {
   return HtmlService.createHtmlOutputFromFile('Index')
@@ -58,7 +57,35 @@ function normalizeAllowedValue_(value, allowedValues, fieldLabel, allowBlank) {
 }
 
 function getUserTeamOptions_() {
-  return USER_TEAM_OPTIONS.slice();
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const teamSheet = ss.getSheetByName('Team');
+  if (!teamSheet) return [];
+
+  const lastRow = teamSheet.getLastRow();
+  if (lastRow < 2) return [];
+
+  const values = teamSheet.getRange(2, 3, lastRow - 1, 1).getDisplayValues();
+  const teams = values
+    .map(function(row) { return String(row[0] || '').trim(); })
+    .filter(function(team) { return team !== ''; });
+
+  return teams.filter(function(team, index) {
+    return teams.indexOf(team) === index;
+  });
+}
+
+function getPositionFromRole_(roleValue) {
+  const normalizedRole = String(roleValue || '').trim();
+  if (normalizedRole === 'Supplier') return 'Supplier';
+  if (normalizedRole === 'SAS Staff') return 'Staff';
+  return '';
+}
+
+function normalizeSerializableValue_(value) {
+  if (Object.prototype.toString.call(value) === '[object Date]' && !isNaN(value.getTime())) {
+    return Utilities.formatDate(value, Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss');
+  }
+  return value == null ? '' : value;
 }
 
 function ensureAdminAccount_() {
@@ -120,7 +147,7 @@ function buildUserObject_(row, rowIndex) {
     line: String(row[9] || '').trim(),
     phone: String(row[10] || '').trim(),
     team: String(row[12] || '').trim(),
-    timestamp: row[13] || row[14] || '',
+    timestamp: normalizeSerializableValue_(row[13] || row[14] || ''),
     sheetValues: {
       role: roleValue,
       position: position,
@@ -460,6 +487,89 @@ function addDefect(taskId, defectData) {
   return newId;
 }
 
+function updateTask(formData) {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet = ss.getSheetByName('TASK');
+  const data = sheet.getDataRange().getValues();
+
+  let rowIndex = -1;
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] === formData.id) {
+      rowIndex = i + 1;
+      break;
+    }
+  }
+
+  if (rowIndex === -1) {
+    throw new Error('ไม่พบ TaskID ที่ต้องการแก้ไขในฐานข้อมูล');
+  }
+
+  const currentStatus = String(data[rowIndex - 1][5] || '').trim();
+  if (currentStatus === 'Closed') {
+    throw new Error('ไม่สามารถแก้ไข Task ที่สถานะ Closed ได้');
+  }
+
+  sheet.getRange(rowIndex, 3).setValue(formData.scope || 'SAS');
+  sheet.getRange(rowIndex, 4).setValue(formData.building || '');
+  sheet.getRange(rowIndex, 5).setValue(formData.unit || '');
+  sheet.getRange(rowIndex, 7).setValue(formData.customerName || '');
+  sheet.getRange(rowIndex, 8).setValue(formData.targetFixDate || '');
+
+  let durationDate = '';
+  if (formData.targetFixDate) {
+    const parts = String(formData.targetFixDate).split('-');
+    if (parts.length === 3) {
+      const dateObj = new Date(parts[0], parts[1] - 1, parts[2]);
+      dateObj.setDate(dateObj.getDate() + 14);
+      durationDate = Utilities.formatDate(dateObj, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+    }
+  }
+
+  sheet.getRange(rowIndex, 9).setValue(durationDate);
+  sheet.getRange(rowIndex, 10).setValue(formData.remark || '');
+  sheet.getRange(rowIndex, 11).setValue(Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM/yyyy, HH:mm:ss'));
+
+  SpreadsheetApp.flush();
+  return 'Update Success';
+}
+
+function updateDefect(defectData) {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet = ss.getSheetByName('DEFECT');
+  const data = sheet.getDataRange().getValues();
+
+  let rowIndex = -1;
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] === defectData.id) {
+      rowIndex = i + 1;
+      break;
+    }
+  }
+
+  if (rowIndex === -1) {
+    throw new Error('ไม่พบ DefectID ที่ต้องการแก้ไขในฐานข้อมูล');
+  }
+
+  const currentStatus = String(data[rowIndex - 1][4] || '').trim();
+  if (currentStatus === 'แก้ไขแล้ว') {
+    throw new Error('ไม่สามารถแก้ไข Defect ที่สถานะ แก้ไขแล้ว ได้');
+  }
+
+  const teamValue = normalizeAllowedValue_(defectData.team, getUserTeamOptions_(), 'Team', false);
+
+  sheet.getRange(rowIndex, 3).setValue(defectData.targetStartDate || '');
+  sheet.getRange(rowIndex, 4).setValue(defectData.targetEndDate || '');
+  sheet.getRange(rowIndex, 6).setValue(defectData.mainCategory || '');
+  sheet.getRange(rowIndex, 7).setValue(defectData.subCategory || '');
+  sheet.getRange(rowIndex, 8).setValue(defectData.description || '');
+  sheet.getRange(rowIndex, 9).setValue(defectData.major || 'ไม่ใช่');
+  sheet.getRange(rowIndex, 10).setValue(teamValue);
+  sheet.getRange(rowIndex, 16).setValue(defectData.voSteps || '');
+
+  SpreadsheetApp.flush();
+  return 'Update Success';
+}
+
 function updateJob(formData) {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const sheet = ss.getSheetByName('JOB');
@@ -708,6 +818,24 @@ function uploadSingleDefectImage(defectId, field, base64Str) {
   }
 }
 
+function getDefectImagePreviewDataUrl(imageUrl) {
+  if (!imageUrl) return '';
+  if (String(imageUrl).indexOf('data:image') === 0) return imageUrl;
+
+  const match = String(imageUrl).match(/\/d\/([a-zA-Z0-9_-]+)/) || String(imageUrl).match(/id=([a-zA-Z0-9_-]+)/);
+  if (!match || !match[1]) return imageUrl;
+
+  try {
+    const file = DriveApp.getFileById(match[1]);
+    const blob = file.getBlob();
+    const contentType = blob.getContentType() || 'image/jpeg';
+    const base64 = Utilities.base64Encode(blob.getBytes());
+    return `data:${contentType};base64,${base64}`;
+  } catch (e) {
+    throw new Error('Preview image load failed: ' + e.toString());
+  }
+}
+
 function updateDefectStatus(defectId, status) {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const sheet = ss.getSheetByName('DEFECT');
@@ -722,286 +850,278 @@ function updateDefectStatus(defectId, status) {
   throw new Error("ไม่พบข้อมูล DefectID ที่ต้องการเปลี่ยนสถานะ");
 }
 
-function exportTaskPlansToPDF(jobId) {
-  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+function getPrintableImgUrlForPdf_(url) {
+  if (!url) return '';
+  if (String(url).startsWith('data:image')) return url;
+  const match = String(url).match(/\/d\/([a-zA-Z0-9_-]+)/) || String(url).match(/id=([a-zA-Z0-9_-]+)/);
+  if (match && match[1]) {
+    try {
+      const file = DriveApp.getFileById(match[1]);
+      const blob = file.getBlob();
+      const base64 = Utilities.base64Encode(blob.getBytes());
+      const mimeType = blob.getContentType() || 'image/jpeg';
+      return `data:${mimeType};base64,${base64}`;
+    } catch (e) {
+      return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w1000`;
+    }
+  }
+  return url;
+}
+
+function getPdfLogoDataUrl_() {
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="%230D504C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>';
+  return 'data:image/svg+xml;utf8,' + svg;
+}
+
+function escapeHtml_(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function buildTaskPlanPdfHtml_(job, task) {
+  const logoDataUrl = getPdfLogoDataUrl_();
+  const defects = (task.defects || []).filter(def => (def.status || 'รอดำเนินการ') === 'รอดำเนินการ');
+  const featuredDefect = defects[0] || null;
+  const featuredImage = featuredDefect ? (getPrintableImgUrlForPdf_(featuredDefect.imgBefore) || getPrintableImgUrlForPdf_(featuredDefect.imgUnit)) : '';
+  const featuredRepairDate = featuredDefect
+    ? (featuredDefect.actualStartDate || featuredDefect.targetStartDate || task.actualStartDate || task.targetFixDate || '')
+    : '';
+  const ownerName = escapeHtml_(job.owner || '-');
+  const staffName = escapeHtml_(job.staff || '-');
+
+  let html = `
+  <!DOCTYPE html>
+  <html>
+    <head>
+      <meta charset="UTF-8">
+      <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+      <style>
+        * { box-sizing: border-box; }
+        @page { size: A4; margin: 12mm; }
+        body { font-family: 'Sarabun', sans-serif; color: #111111; line-height: 1.45; font-size: 11px; margin: 0; padding: 0; background: #ffffff; }
+        .sheet { width: 100%; min-height: 272mm; padding: 12mm 12mm 10mm; display: flex; flex-direction: column; }
+        .hero { padding: 0 0 8mm; color: #111111; }
+        .hero-grid { width: 100%; border-collapse: collapse; }
+        .hero-grid td { vertical-align: top; }
+        .brand { width: 90px; }
+        .brand-badge { width: 60px; height: 38px; text-align: left; }
+        .brand-badge img { width: 40px; height: 40px; object-fit: contain; }
+        .hero-main { text-align: center; padding-top: 2px; }
+        .hero-title { font-size: 18px; font-weight: 500; letter-spacing: 0; margin: 0; }
+        .hero-subtitle { font-size: 10px; margin-top: 2px; }
+        .hero-ids { width: 115px; text-align: right; }
+        .hero-label { font-size: 9px; color: #555555; }
+        .hero-value { font-size: 11px; font-weight: 500; margin-top: 2px; min-height: 16px; }
+        .body { flex: 1; display: flex; flex-direction: column; }
+        .section-title { font-size: 12px; font-weight: 700; color: #111111; margin: 0 0 4mm; text-transform: uppercase; }
+        .info-table { width: 100%; border-collapse: collapse; margin-bottom: 6mm; }
+        .info-table td { padding: 2.2mm 0; vertical-align: top; font-size: 10px; }
+        .info-label { width: 16%; font-weight: 400; white-space: nowrap; }
+        .info-value { width: 34%; font-weight: 400; padding-left: 2mm; }
+        .detail-card { page-break-inside: avoid; }
+        .detail-shell { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        .detail-shell td { vertical-align: top; }
+        .detail-visual { width: 40%; padding-right: 8mm; }
+        .detail-meta { width: 60%; }
+        .image-box { border: 1px solid #222222; height: 92mm; padding: 6mm; background: #ffffff; text-align: center; display: flex; align-items: center; justify-content: center; }
+        .image-box img { max-width: 100%; max-height: 78mm; object-fit: contain; }
+        .no-image { width: 100%; height: 78mm; color: #444444; font-size: 12px; display: flex; align-items: center; justify-content: center; }
+        .detail-caption { margin-top: 4mm; text-align: center; font-size: 10px; }
+        .meta-line { margin-bottom: 8mm; }
+        .meta-inline { font-size: 10px; font-weight: 600; }
+        .meta-title { font-size: 11px; font-weight: 700; margin: 0 0 2mm; }
+        .meta-body { font-size: 10px; min-height: 18mm; white-space: pre-wrap; word-break: break-word; }
+        .meta-small { font-size: 10px; font-weight: 600; min-height: 8mm; }
+        .signature-wrap { margin-top: auto; padding-top: 18mm; page-break-inside: avoid; }
+        .signature-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        .signature-table td { width: 50%; vertical-align: bottom; }
+        .signature-table td:last-child { padding-left: 18mm; }
+        .signature-block { min-height: 34mm; }
+        .signature-title { font-size: 11px; font-weight: 400; text-transform: uppercase; margin-bottom: 17mm; }
+        .signature-line { border-bottom: 1px solid #111111; height: 1px; }
+        .signature-name { font-size: 10px; margin-top: 4mm; }
+        .signature-date { font-size: 10px; margin-top: 1.5mm; }
+      </style>
+    </head>
+    <body>
+      <div class="sheet">
+        <div class="hero">
+          <table class="hero-grid">
+            <tr>
+              <td class="brand">
+                <div class="brand-badge"><img src="${logoDataUrl}" /></div>
+              </td>
+              <td class="hero-main">
+                <div class="hero-title">Repair Planning Document</div>
+                <div class="hero-subtitle">เอกสารแผนเข้าแก้ไข</div>
+              </td>
+              <td class="hero-ids">
+                <div class="hero-label">Job ID:</div>
+                <div class="hero-value">${escapeHtml_(job.id)}</div>
+                <div class="hero-label" style="margin-top: 4px;">Task ID:</div>
+                <div class="hero-value">${escapeHtml_(task.id)}</div>
+              </td>
+            </tr>
+          </table>
+        </div>
+        <div class="body">
+          <div class="section-title">Information</div>
+          <table class="info-table">
+            <tr>
+              <td class="info-label">ชื่อลูกค้า :</td><td class="info-value">${escapeHtml_(task.customerName || '-')}</td>
+              <td class="info-label">SITE :</td><td class="info-value">${escapeHtml_(job.site || '-')}</td>
+            </tr>
+            <tr>
+              <td class="info-label">Owner / ผู้ดูแล :</td><td class="info-value">${ownerName}</td>
+              <td class="info-label">Building - Unit :</td><td class="info-value">${escapeHtml_(`${task.building || '-'} - ${task.unit || '-'}`)}</td>
+            </tr>
+            <tr>
+              <td class="info-label">Staff/ผู้รับผิดชอบ :</td><td class="info-value">${staffName}</td>
+              <td class="info-label"></td><td class="info-value"></td>
+            </tr>
+          </table>
+          <div class="section-title">Detail</div>
+  `;
+
+  if (featuredDefect) {
+    html += `
+          <div class="detail-card">
+            <table class="detail-shell">
+              <tr>
+                <td class="detail-visual">
+                  <div class="image-box">
+                    ${featuredImage ? `<img src="${featuredImage}" />` : `<div class="no-image">รูปภาพก่อนแก้ไข</div>`}
+                  </div>
+                  <div class="detail-caption">รูปภาพก่อนแก้ไข</div>
+                </td>
+                <td class="detail-meta">
+                  <div class="meta-line">
+                    <div class="meta-inline">ลักษณะงานหลัก - ลักษณะงานรอง</div>
+                    <div class="meta-body">${escapeHtml_(`${featuredDefect.mainCategory || '-'} - ${featuredDefect.subCategory || '-'}`)}</div>
+                  </div>
+                  <div class="meta-line">
+                    <div class="meta-title">รายละเอียด Defect</div>
+                    <div class="meta-body">${escapeHtml_(featuredDefect.description || '-')}</div>
+                  </div>
+                  <div class="meta-line">
+                    <div class="meta-title">ทีมที่เข้าแก้</div>
+                    <div class="meta-small">${escapeHtml_(featuredDefect.team || '-')}</div>
+                  </div>
+                  <div class="meta-line">
+                    <div class="meta-title">กำหนดวันที่เข้าแก้ไข</div>
+                    <div class="meta-small">${escapeHtml_(featuredRepairDate || 'ยังไม่ได้ระบุ')}</div>
+                  </div>
+                  <div class="meta-line" style="margin-bottom: 0;">
+                    <div class="meta-title">Major</div>
+                    <div class="meta-small">${escapeHtml_(featuredDefect.major || 'ไม่ใช่')}</div>
+                  </div>
+                </td>
+              </tr>
+            </table>
+          </div>
+    `;
+  } else {
+    html += `
+          <div class="detail-card">
+            <table class="detail-shell">
+              <tr>
+                <td class="detail-visual">
+                  <div class="image-box"><div class="no-image">รูปภาพก่อนแก้ไข</div></div>
+                  <div class="detail-caption">รูปภาพก่อนแก้ไข</div>
+                </td>
+                <td class="detail-meta">
+                  <div class="meta-line">
+                    <div class="meta-inline">ลักษณะงานหลัก - ลักษณะงานรอง</div>
+                    <div class="meta-body">-</div>
+                  </div>
+                  <div class="meta-line">
+                    <div class="meta-title">รายละเอียด Defect</div>
+                    <div class="meta-body">ไม่มีรายการ Defect สถานะรอดำเนินการในใบงานย่อยนี้</div>
+                  </div>
+                  <div class="meta-line">
+                    <div class="meta-title">ทีมที่เข้าแก้</div>
+                    <div class="meta-small">-</div>
+                  </div>
+                  <div class="meta-line">
+                    <div class="meta-title">กำหนดวันที่เข้าแก้ไข</div>
+                    <div class="meta-small">-</div>
+                  </div>
+                  <div class="meta-line" style="margin-bottom: 0;">
+                    <div class="meta-title">Major</div>
+                    <div class="meta-small">-</div>
+                  </div>
+                </td>
+              </tr>
+            </table>
+          </div>
+    `;
+  }
+
+  html += `
+          <div class="signature-wrap">
+            <table class="signature-table">
+              <tr>
+                <td>
+                  <div class="signature-block">
+                    <div class="signature-title">Staff Signature</div>
+                    <div class="signature-line"></div>
+                    <div class="signature-name">( ${staffName} )</div>
+                    <div class="signature-date">วันที่: ......../......../..............</div>
+                  </div>
+                </td>
+                <td>
+                  <div class="signature-block">
+                    <div class="signature-title">Owner Signature</div>
+                    <div class="signature-line"></div>
+                    <div class="signature-name">( ${ownerName} )</div>
+                    <div class="signature-date">วันที่: ......../......../..............</div>
+                  </div>
+                </td>
+              </tr>
+            </table>
+          </div>
+        </div>
+      </div>
+    </body>
+  </html>`;
+
+  return html;
+}
+
+function exportTaskPlansToPDF(jobId, taskId) {
   const allDataStr = getAllData();
   const allJobs = JSON.parse(allDataStr);
   const job = allJobs.find(j => j.id === jobId);
 
-  if (!job) throw new Error("ไม่พบข้อมูลใบงานหลัก (Job)");
-  if (!job.tasks || job.tasks.length === 0) throw new Error("ไม่มีใบงานย่อยให้ Export");
+  if (!job) throw new Error('ไม่พบข้อมูลใบงานหลัก (Job)');
+  if (!job.tasks || job.tasks.length === 0) throw new Error('ไม่มีใบงานย่อยให้ Export');
+
+  const pendingTasks = job.tasks.filter(task => (task.status || 'รอดำเนินการ') === 'รอดำเนินการ');
+  if (pendingTasks.length === 0) throw new Error('ไม่มีใบงานย่อยสถานะรอดำเนินการสำหรับ Export');
+
+  const requestedTaskIds = Array.isArray(taskId)
+    ? taskId.filter(Boolean)
+    : (taskId ? [taskId] : []);
+
+  const selectedTasks = requestedTaskIds.length > 0
+    ? pendingTasks.filter(task => requestedTaskIds.indexOf(task.id) !== -1)
+    : pendingTasks;
+
+  if (selectedTasks.length === 0) throw new Error('ไม่พบใบงานย่อยที่เลือก หรือใบงานนั้นไม่ได้อยู่ในสถานะรอดำเนินการ');
 
   const folder = DriveApp.getFolderById(IMAGE_FOLDER_ID);
-  let exportedFiles = [];
+  const exportedFiles = [];
 
-  const getPrintableImgUrl = (url) => {
-    if (!url) return '';
-    if (url.startsWith('data:image')) return url;
-    const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/) || url.match(/id=([a-zA-Z0-9_-]+)/);
-    if (match && match[1]) {
-      try {
-        const fileId = match[1];
-        const file = DriveApp.getFileById(fileId);
-        const blob = file.getBlob();
-        const base64 = Utilities.base64Encode(blob.getBytes());
-        const mimeType = blob.getContentType();
-        return `data:${mimeType};base64,${base64}`;
-      } catch (e) {
-        return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w500`;
-      }
-    }
-    return url;
-  };
-
-  job.tasks.forEach(task => {
-    let html = `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <meta charset="UTF-8">
-        <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-        <style>
-          body { 
-            font-family: 'Sarabun', sans-serif; 
-            color: #1e293b; 
-            line-height: 1.6; 
-            font-size: 14px; 
-            margin: 0; 
-            padding: 10px;
-          }
-          .header-title { 
-            text-align: center; 
-            color: #0f172a; 
-            margin-bottom: 25px; 
-            font-size: 24px; 
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-          }
-          table.header-table { 
-            width: 100%; 
-            border-collapse: collapse; 
-            margin-bottom: 30px; 
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-          }
-          table.header-table th, table.header-table td { 
-            border: 1px solid #cbd5e1; 
-            padding: 10px 12px; 
-            text-align: left; 
-            vertical-align: top;
-          }
-          table.header-table th { 
-            background-color: #f1f5f9; 
-            width: 18%; 
-            font-weight: 600; 
-            color: #334155;
-          }
-          table.header-table td {
-            width: 32%;
-            color: #0f172a;
-          }
-          
-          .section-title {
-            font-size: 18px;
-            font-weight: 600;
-            color: #1e40af;
-            border-bottom: 2px solid #93c5fd;
-            padding-bottom: 8px;
-            margin-bottom: 15px;
-          }
-
-          .defect-card { 
-            border: 1px solid #e2e8f0; 
-            margin-bottom: 20px; 
-            padding: 15px; 
-            page-break-inside: avoid; 
-            border-radius: 8px; 
-            background-color: #ffffff;
-          }
-          .defect-layout { 
-            display: table; 
-            width: 100%; 
-          }
-          .img-col { 
-            display: table-cell; 
-            width: 200px; 
-            vertical-align: top; 
-            text-align: center; 
-            padding-right: 20px; 
-            border-right: 1px dashed #cbd5e1; 
-          }
-          .info-col { 
-            display: table-cell; 
-            vertical-align: top; 
-            padding-left: 20px; 
-          }
-          
-          .img-col img { 
-            max-width: 100%; 
-            max-height: 200px; 
-            border-radius: 6px; 
-            border: 1px solid #e2e8f0; 
-            padding: 3px;
-          }
-          .no-img { 
-            width: 100%; 
-            height: 120px; 
-            background: #f8fafc; 
-            border: 2px dashed #cbd5e1; 
-            border-radius: 6px;
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            color: #94a3b8; 
-            font-size: 13px; 
-            margin-top: 10px;
-          }
-          
-          .meta { margin-bottom: 6px; color: #475569; }
-          .meta strong { color: #1e293b; font-weight: 600;}
-          .major { color: #dc2626; font-weight: 700; background-color: #fef2f2; padding: 2px 6px; border-radius: 4px; font-size: 12px;}
-          
-          .desc-box { 
-            background-color: #f8fafc; 
-            border-left: 4px solid #3b82f6; 
-            padding: 12px 15px; 
-            margin: 15px 0; 
-            font-size: 15px; 
-            color: #334155; 
-            display: block;
-            border-radius: 0 6px 6px 0;
-          }
-          .desc-box strong { color: #0f172a; display: block; margin-bottom: 4px; font-size: 14px;}
-
-          .date-badge { 
-            display: inline-block; 
-            background-color: #fffbeb; 
-            border: 1px solid #fde68a; 
-            color: #b45309; 
-            padding: 6px 12px; 
-            font-weight: 600; 
-            font-size: 13px; 
-            border-radius: 6px; 
-          }
-
-          .signature-container {
-              width: 100%;
-              margin-top: 50px;
-              page-break-inside: avoid;
-          }
-          .signature-table {
-              width: 100%;
-              border-collapse: collapse;
-              text-align: center;
-          }
-          .signature-table td {
-              width: 50%;
-              padding: 10px 20px;
-              vertical-align: bottom;
-          }
-          .sign-line {
-              border-bottom: 1px dashed #94a3b8;
-              width: 70%;
-              margin: 40px auto 10px auto;
-          }
-          .sign-text {
-              color: #334155;
-              font-size: 14px;
-              line-height: 1.5;
-          }
-          .sign-name {
-              font-weight: 600;
-              color: #0f172a;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="header-title">แผนเข้าแก้ไข (Repair Plan)</div>
-        <table class="header-table">
-          <tr>
-            <th>Job ID</th><td>${job.id}</td>
-            <th>Task ID</th><td>${task.id}</td>
-          </tr>
-          <tr>
-            <th>Site</th><td>${job.site}</td>
-            <th>Scope</th><td>${task.scope}</td>
-          </tr>
-          <tr>
-            <th>Owner / ผู้ดูแล</th><td>${job.owner}</td>
-            <th>Building / Unit</th><td>${task.building} - ${task.unit}</td>
-          </tr>
-          <tr>
-            <th>Company</th><td>${job.ownerCompany || '-'}</td>
-            <th>ชื่อลูกค้า</th><td>${task.customerName || '-'}</td>
-          </tr>
-          <tr>
-            <th>Staff / ผู้จัดทำ</th><td colspan="3">${job.staff || '-'}</td>
-          </tr>
-        </table>
-
-        <div class="section-title">รายการ Defect ที่ต้องดำเนินการ</div>
-    `;
-
-    if (task.defects && task.defects.length > 0) {
-      task.defects.forEach((def) => {
-        let printImg = getPrintableImgUrl(def.imgBefore);
-        let imgTag = printImg ? `<img src="${printImg}" />` : `<div class="no-img">ไม่มีรูปภาพก่อนแก้ไข</div>`;
-        
-        html += `
-        <div class="defect-card">
-          <div class="defect-layout">
-            <div class="img-col">
-              ${imgTag}
-            </div>
-            <div class="info-col">
-              <div class="meta"><strong>ลักษณะงานหลัก:</strong> ${def.mainCategory} &nbsp;|&nbsp; <strong>ลักษณะงานรอง:</strong> ${def.subCategory}</div>
-              <div class="meta"><strong>ทีมเข้าแก้ไข:</strong> ${def.team} &nbsp;|&nbsp; <strong>Major:</strong> <span class="${def.major === 'ใช่' ? 'major' : ''}">${def.major || 'ไม่ใช่'}</span></div>
-              
-              <div class="desc-box">
-                <strong>รายละเอียดปัญหา:</strong>
-                ${def.description}
-              </div>
-              
-              <div class="date-badge">
-                📅 กำหนดวันเข้าแก้ไข: ${task.targetFixDate || 'ยังไม่ได้ระบุวันที่'}
-              </div>
-            </div>
-          </div>
-        </div>
-        `;
-      });
-    } else {
-      html += `<p style="text-align:center; color:#94a3b8; padding: 30px 0; font-style: italic;">- ไม่มีรายการ Defect ในใบงานย่อยนี้ -</p>`;
-    }
-
-    html += `
-        <div class="signature-container">
-            <table class="signature-table">
-                <tr>
-                    <td>
-                        <div class="sign-line"></div>
-                        <div class="sign-text sign-name">( ${job.staff || '.........................................................'} )</div>
-                        <div class="sign-text">ผู้จัดทำแผน (Staff)</div>
-                        <div class="sign-text" style="margin-top: 5px;">วันที่: ......../......../..............</div>
-                    </td>
-                    <td>
-                        <div class="sign-line"></div>
-                        <div class="sign-text sign-name">( ${job.owner || '.........................................................'} )</div>
-                        <div class="sign-text">ผู้อนุมัติ (Owner)</div>
-                        <div class="sign-text" style="margin-top: 5px;">วันที่: ......../......../..............</div>
-                    </td>
-                </tr>
-            </table>
-        </div>
-    `;
-
-    html += `</body></html>`;
-
+  selectedTasks.forEach(task => {
+    const html = buildTaskPlanPdfHtml_(job, task);
     const blob = Utilities.newBlob(html, MimeType.HTML).getAs(MimeType.PDF).setName(`RepairPlan_${task.id}.pdf`);
     const file = folder.createFile(blob);
     file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-    
-    exportedFiles.push({ taskId: task.id, url: file.getUrl() });
+    exportedFiles.push({ taskId: task.id, url: file.getUrl(), name: file.getName() });
   });
 
   return JSON.stringify(exportedFiles);
@@ -1010,6 +1130,7 @@ function exportTaskPlansToPDF(jobId) {
 function exportDefectReportToPDF(taskId) {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const allDataStr = getAllData();
+  
   const allJobs = JSON.parse(allDataStr);
   
   let targetTask = null;
@@ -1071,12 +1192,35 @@ function exportDefectReportToPDF(taskId) {
           .img-label { font-size: 13px; font-weight: 700; margin-bottom: 8px; color: #1e40af; background-color: #eff6ff; padding: 4px 0; border-radius: 4px; }
           .no-img { height: 120px; background: #f8fafc; border: 2px dashed #cbd5e1; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 12px; margin-top: 5px; }
 
-          .signature-container { width: 100%; margin-top: 50px; page-break-inside: avoid; }
-          .signature-table { width: 100%; border-collapse: collapse; text-align: center; }
-          .signature-table td { width: 50%; padding: 10px 20px; vertical-align: bottom; }
-          .sign-line { border-bottom: 1px dashed #94a3b8; width: 70%; margin: 40px auto 10px auto; }
-          .sign-text { color: #334155; font-size: 14px; line-height: 1.5; }
-          .sign-name { font-weight: 600; color: #0f172a; }
+          .signature-container {
+              width: 100%;
+              margin-top: 50px;
+              page-break-inside: avoid;
+          }
+          .signature-table {
+              width: 100%;
+              border-collapse: collapse;
+              text-align: center;
+          }
+          .signature-table td {
+              width: 50%;
+              padding: 10px 20px;
+              vertical-align: bottom;
+          }
+          .sign-line {
+              border-bottom: 1px dashed #94a3b8;
+              width: 70%;
+              margin: 40px auto 10px auto;
+          }
+          .sign-text {
+              color: #334155;
+              font-size: 14px;
+              line-height: 1.5;
+          }
+          .sign-name {
+              font-weight: 600;
+              color: #0f172a;
+          }
         </style>
       </head>
       <body>
@@ -1174,8 +1318,6 @@ function exportDefectReportToPDF(taskId) {
 
   const blob = Utilities.newBlob(html, MimeType.HTML).getAs(MimeType.PDF).setName(`DefectReport_${targetTask.id}.pdf`);
   const file = folder.createFile(blob);
-  file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-  
   return JSON.stringify({ taskId: targetTask.id, url: file.getUrl() });
 }
 
@@ -1184,10 +1326,13 @@ function registerUser(formData) {
   const sheet = getUserSheet_();
   
   const data = sheet.getDataRange().getValues();
-  const inputUserId = String(formData.userId).trim().toLowerCase(); // เปลี่ยนเป็น toLowerCase
+  const inputUserId = String(formData.userId || '').trim().toLowerCase();
   const fullName = String(formData.fullName || '').trim();
   const password = String(formData.password || '').trim();
   const confirmPassword = String(formData.confirmPassword == null ? formData.password : formData.confirmPassword).trim();
+  const email = String(formData.email || '').trim();
+  const line = String(formData.line || '').trim();
+  const phone = String(formData.phone || '').trim();
 
   for (let i = 1; i < data.length; i++) {
     if (String(data[i][0]).trim().toLowerCase() === inputUserId) {
@@ -1204,17 +1349,18 @@ function registerUser(formData) {
   }
 
   const roleValue = normalizeAllowedValue_(formData.roleValue, USER_ROLE_OPTIONS, 'Role', false);
+  const positionValue = getPositionFromRole_(roleValue);
 
   const newRow = new Array(15).fill('');
-  newRow[0] = String(formData.userId).trim(); // บันทึกตามที่พิมพ์ (เผื่อผู้ใช้พิมพ์ตัวเล็กตัวใหญ่ผสมกัน)
+  newRow[0] = String(formData.userId || '').trim();
   newRow[1] = "'" + confirmPassword;
   newRow[2] = fullName;
   newRow[4] = roleValue;
-  newRow[5] = '';
+  newRow[5] = positionValue;
   newRow[6] = false;
-  newRow[8] = String(formData.email || '').trim();
-  newRow[9] = String(formData.line || '').trim();
-  newRow[10] = String(formData.phone || '').trim();
+  newRow[8] = email;
+  newRow[9] = line;
+  newRow[10] = phone;
   newRow[12] = '';
   newRow[13] = new Date();
 
@@ -1295,16 +1441,46 @@ function addManagedUser(actingUserId, payload) {
   assertAdmin_(actingUserId);
   if (!payload) throw new Error('ไม่พบข้อมูลผู้ใช้งาน');
 
-  return registerUser({
-    userId: payload.userId,
-    fullName: payload.fullName,
-    roleValue: payload.roleValue,
-    password: payload.password,
-    confirmPassword: payload.confirmPassword,
-    email: payload.email,
-    line: payload.line,
-    phone: payload.phone
-  });
+  const sheet = getUserSheet_();
+  const data = sheet.getDataRange().getValues();
+  const inputUserId = String(payload.userId || '').trim().toLowerCase();
+  const fullName = String(payload.fullName || '').trim();
+  const password = String(payload.password || '').trim();
+  const confirmPassword = String(payload.confirmPassword == null ? payload.password : payload.confirmPassword).trim();
+  const roleValue = normalizeAllowedValue_(payload.roleValue, USER_ROLE_OPTIONS, 'Role', false);
+  const positionValue = normalizeAllowedValue_(payload.position || getPositionFromRole_(roleValue) || 'Staff', USER_POSITION_OPTIONS, 'Position', false);
+  const approved = normalizeBoolean_(payload.approved);
+  const teamValue = normalizeAllowedValue_(payload.team || '', getUserTeamOptions_(), 'Team', true);
+
+  if (!inputUserId) throw new Error('กรุณากรอก User ID');
+  if (!fullName) throw new Error('กรุณากรอกชื่อ - นามสกุล');
+  if (!password) throw new Error('กรุณากรอก Password');
+  if (!confirmPassword) throw new Error('กรุณากรอก Confirm Password');
+  if (password !== confirmPassword) throw new Error('Password และ Confirm Password ไม่ตรงกัน');
+  if (positionValue === 'Supplier' && !teamValue) throw new Error('กรุณาเลือกทีมเข้าแก้ไขสำหรับผู้ใช้ Supplier');
+
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]).trim().toLowerCase() === inputUserId) {
+      throw new Error('User ID นี้มีผู้ใช้งานแล้ว กรุณาใช้ชื่ออื่น');
+    }
+  }
+
+  const newRow = new Array(15).fill('');
+  newRow[0] = String(payload.userId).trim();
+  newRow[1] = "'" + confirmPassword;
+  newRow[2] = fullName;
+  newRow[4] = roleValue;
+  newRow[5] = positionValue;
+  newRow[6] = approved;
+  newRow[8] = String(payload.email || '').trim();
+  newRow[9] = String(payload.line || '').trim();
+  newRow[10] = String(payload.phone || '').trim();
+  newRow[12] = teamValue;
+  newRow[13] = new Date();
+
+  sheet.appendRow(newRow);
+  SpreadsheetApp.flush();
+  return 'Success';
 }
 
 function getUsersForManagement(actingUserId) {
@@ -1332,7 +1508,7 @@ function updateManagedUser(actingUserId, payload) {
   const password = String(payload.password == null ? found.user.password : payload.password).trim();
   const confirmPassword = String(payload.confirmPassword == null ? payload.password : payload.confirmPassword).trim();
   const roleValue = normalizeAllowedValue_(payload.roleValue == null ? found.user.roleValue : payload.roleValue, USER_ROLE_OPTIONS, 'Role', false);
-  const positionValue = normalizeAllowedValue_(payload.position == null ? found.user.position : payload.position, USER_POSITION_OPTIONS, 'Position', false);
+  const positionValue = normalizeAllowedValue_(payload.position == null ? found.user.position || getPositionFromRole_(roleValue) : payload.position, USER_POSITION_OPTIONS, 'Position', false);
   const approved = normalizeBoolean_(payload.approved == null ? found.user.approved : payload.approved);
   const teamValue = normalizeAllowedValue_(payload.team == null ? found.user.team : payload.team, getUserTeamOptions_(), 'ทีมเข้าแก้ไข', true);
   const email = String(payload.email == null ? found.user.email : payload.email).trim();
