@@ -113,7 +113,9 @@
                            ]));
                         }
                         else if (p === 'exportTaskPlansToPDF') {
-                           t.success(JSON.stringify([{taskId: 'MOCK-DOC', url: '#'}]));
+                           const selectedTaskIds = Array.isArray(args[1]) ? args[1].filter(Boolean) : (args[1] ? [args[1]] : []);
+                           const mockTaskIds = selectedTaskIds.length > 0 ? selectedTaskIds : ['MOCK-TASK-001', 'MOCK-TASK-002'];
+                           t.success(JSON.stringify(mockTaskIds.map(taskId => ({taskId, name: `RepairPlan_${taskId}.pdf`, url: '#'}))));
                         }
                         else if (p === 'exportDefectReportToPDF') {
                            t.success(JSON.stringify({taskId: 'MOCK-DOC', url: '#'}));
@@ -205,6 +207,14 @@
       DotsThree: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>,
       Trash: ({ className }) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>,
       Settings: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0-2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>,
+      Edit: ({ className = "w-5 h-5" }) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path></svg>,
+      Eye: ({ className = "w-5 h-5" }) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>,
+      Move: ({ className = "w-5 h-5" }) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M5 9l-3 3 3 3"></path><path d="M9 5l3-3 3 3"></path><path d="M15 19l-3 3-3-3"></path><path d="M19 9l3 3-3 3"></path><path d="M2 12h20"></path><path d="M12 2v20"></path></svg>,
+      Minus: ({ className = "w-5 h-5" }) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="5" y1="12" x2="19" y2="12"></line></svg>,
+      Square: ({ className = "w-5 h-5" }) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect x="4" y="4" width="16" height="16" rx="2"></rect></svg>,
+      Circle: ({ className = "w-5 h-5" }) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="8"></circle></svg>,
+      Type: ({ className = "w-5 h-5" }) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="4 7 4 4 20 4 20 7"></polyline><line x1="9" y1="20" x2="15" y2="20"></line><line x1="12" y1="4" x2="12" y2="20"></line></svg>,
+      Undo: ({ className = "w-5 h-5" }) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M3 7v6h6"></path><path d="M21 17a9 9 0 0 0-15-6.7L3 13"></path></svg>,
       CheckCircle: ({ className = "w-5 h-5" }) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>,
       Download: ({ className }) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>,
       User: ({ className }) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>,
@@ -430,140 +440,574 @@
     // --- Component จัดการรูปภาพ (วาด + ใส่ลายน้ำ พิกัด & เวลา) ---
     const ImageAnnotator = ({ imageSrc, field, onSave, onClose }) => {
       const canvasRef = useRef(null);
-      const [isDrawing, setIsDrawing] = useState(false);
-      const [location, setLocation] = useState('กำลังหาพิกัด...');
-      const [color, setColor] = useState('#ef4444'); // Default Red
-      const [baseImgData, setBaseImgData] = useState(null); 
+      const historyRef = useRef([[]]);
+      const annotationIdRef = useRef(0);
+      const [locationLabel, setLocationLabel] = useState('กำลังหาตำแหน่ง...');
+      const [color, setColor] = useState('#ef4444');
+      const [tool, setTool] = useState('move');
+      const [brushSize, setBrushSize] = useState(5);
+      const [fontScale, setFontScale] = useState(1);
+      const [shapeStart, setShapeStart] = useState(null);
+      const [draftShape, setDraftShape] = useState(null);
+      const [baseImageElement, setBaseImageElement] = useState(null);
+      const [overlayTimestamp, setOverlayTimestamp] = useState('');
+      const [annotations, setAnnotations] = useState([]);
+      const [selectedAnnotationId, setSelectedAnnotationId] = useState(null);
+      const [dragState, setDragState] = useState(null);
+      const [isStylePanelOpen, setIsStylePanelOpen] = useState(false);
 
-      useEffect(() => {
-        if (navigator.geolocation) {
-          navigator.geolocation.getCurrentPosition(
-            (pos) => setLocation(`Lat: ${pos.coords.latitude.toFixed(5)}, Lng: ${pos.coords.longitude.toFixed(5)}`),
-            (err) => setLocation('Location: ไม่สามารถดึงพิกัดได้')
-          );
-        } else {
-          setLocation('Location: ไม่รองรับการดึงพิกัด');
-        }
+      const cloneAnnotations = (items) => JSON.parse(JSON.stringify(items || []));
 
+      const pushHistory = (items) => {
+        historyRef.current = [...historyRef.current, cloneAnnotations(items)].slice(-20);
+      };
+
+      const createAnnotationId = () => {
+        annotationIdRef.current += 1;
+        return `annotation-${annotationIdRef.current}`;
+      };
+
+      const getCanvasPoint = (e) => {
         const canvas = canvasRef.current;
-        const ctx = canvas.getContext('2d');
-        const img = new Image();
-        img.onload = () => {
-          const MAX_WIDTH = 800;
-          const MAX_HEIGHT = 800;
-          let width = img.width;
-          let height = img.height;
-          
-          if (width > height) {
-            if (width > MAX_WIDTH) {
-              height = Math.round((height * MAX_WIDTH) / width);
-              width = MAX_WIDTH;
-            }
-          } else {
-            if (height > MAX_HEIGHT) {
-              width = Math.round((width * MAX_HEIGHT) / height);
-              height = MAX_HEIGHT;
-            }
-          }
-          
-          canvas.width = width;
-          canvas.height = height;
-          
-          ctx.drawImage(img, 0, 0, width, height);
-
-          const timestamp = new Date().toLocaleString('th-TH');
-          const watermarkText = `${timestamp} | ${location}`;
-          
-          ctx.font = `bold ${Math.max(14, width * 0.035)}px Sarabun, sans-serif`;
-          ctx.fillStyle = 'yellow';
-          ctx.strokeStyle = 'black';
-          ctx.lineWidth = 3;
-          ctx.textBaseline = 'bottom';
-          ctx.textAlign = 'right';
-          
-          ctx.strokeText(watermarkText, width - 15, height - 15);
-          ctx.fillText(watermarkText, width - 15, height - 15);
-          
-          setBaseImgData(ctx.getImageData(0, 0, width, height));
-        };
-        img.src = imageSrc;
-      }, [imageSrc, location]);
-
-      const startDrawing = (e) => { setIsDrawing(true); draw(e); };
-      const finishDrawing = () => { setIsDrawing(false); const ctx = canvasRef.current.getContext('2d'); ctx.beginPath(); };
-      const draw = (e) => {
-        if (!isDrawing) return;
-        const canvas = canvasRef.current;
-        const ctx = canvas.getContext('2d');
         const rect = canvas.getBoundingClientRect();
-        
-        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-        
+        const touch = e.touches ? e.touches[0] : (e.changedTouches ? e.changedTouches[0] : null);
+        const clientX = touch ? touch.clientX : e.clientX;
+        const clientY = touch ? touch.clientY : e.clientY;
         const scaleX = canvas.width / rect.width;
         const scaleY = canvas.height / rect.height;
-        const x = (clientX - rect.left) * scaleX;
-        const y = (clientY - rect.top) * scaleY;
+        return {
+          x: (clientX - rect.left) * scaleX,
+          y: (clientY - rect.top) * scaleY
+        };
+      };
 
-        ctx.strokeStyle = color;
-        ctx.lineWidth = Math.max(3, canvas.width * 0.005);
-        ctx.lineCap = 'round';
+      const drawOverlay = (ctx, width, height, locationText, timestampText) => {
+        const safeLocation = String(locationText || 'Location: ไม่สามารถระบุตำแหน่งได้');
+        const safeTimestamp = String(timestampText || new Date().toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' }));
+        const overlayText = `${safeTimestamp}  |  ${safeLocation}`;
+        const paddingX = 0;
+        const paddingY = 0;
+        const fontSize = Math.max(14, Math.round(width * 0.02));
+        const boxHeight = fontSize + 22;
+        const boxWidth = width - (paddingX * 2);
+        const boxX = paddingX;
+        const boxY = height - boxHeight - paddingY;
 
-        ctx.lineTo(x, y);
-        ctx.stroke();
+        ctx.save();
+        ctx.fillStyle = 'rgba(13, 148, 136, 0.60)';
+        ctx.strokeStyle = 'rgba(240, 253, 250, 0.55)';
+        ctx.lineWidth = 1.4;
         ctx.beginPath();
-        ctx.moveTo(x, y);
+        ctx.roundRect(boxX, boxY, boxWidth, boxHeight, 0);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#f0fdfa';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.font = `700 ${fontSize}px Inter, Sarabun, sans-serif`;
+        ctx.lineWidth = Math.max(2, brushSize * 0.35);
+        ctx.strokeStyle = 'rgba(4, 47, 46, 0.42)';
+        ctx.strokeText(overlayText, boxX + (boxWidth / 2), boxY + (boxHeight / 2));
+        ctx.fillText(overlayText, boxX + (boxWidth / 2), boxY + (boxHeight / 2));
+        ctx.restore();
+      };
+
+      const getAnnotationBounds = (annotation) => {
+        if (!annotation) return null;
+        if (annotation.type === 'pen') {
+          const points = annotation.points || [];
+          if (!points.length) return null;
+          const xs = points.map(point => point.x);
+          const ys = points.map(point => point.y);
+          return {
+            x: Math.min(...xs),
+            y: Math.min(...ys),
+            width: Math.max(...xs) - Math.min(...xs),
+            height: Math.max(...ys) - Math.min(...ys)
+          };
+        }
+        if (annotation.type === 'text') {
+          const width = Math.max(80, (annotation.text || '').length * annotation.fontSize * 0.58);
+          const height = annotation.fontSize * 1.3;
+          return { x: annotation.x, y: annotation.y, width, height };
+        }
+        if (annotation.type === 'circle') {
+          const radius = Math.sqrt(((annotation.x2 - annotation.x1) ** 2) + ((annotation.y2 - annotation.y1) ** 2));
+          return { x: annotation.x1 - radius, y: annotation.y1 - radius, width: radius * 2, height: radius * 2 };
+        }
+        return {
+          x: Math.min(annotation.x1, annotation.x2),
+          y: Math.min(annotation.y1, annotation.y2),
+          width: Math.abs(annotation.x2 - annotation.x1),
+          height: Math.abs(annotation.y2 - annotation.y1)
+        };
+      };
+
+      const drawSingleAnnotation = (ctx, annotation, isSelected = false) => {
+        if (!annotation) return;
+        ctx.save();
+        ctx.strokeStyle = annotation.color;
+        ctx.fillStyle = annotation.color;
+        ctx.lineWidth = annotation.size;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+
+        if (annotation.type === 'pen') {
+          const points = annotation.points || [];
+          if (points.length > 1) {
+            ctx.beginPath();
+            ctx.moveTo(points[0].x, points[0].y);
+            points.slice(1).forEach(point => ctx.lineTo(point.x, point.y));
+            ctx.stroke();
+          } else if (points.length === 1) {
+            ctx.beginPath();
+            ctx.arc(points[0].x, points[0].y, annotation.size / 2, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        } else if (annotation.type === 'rect') {
+          ctx.strokeRect(annotation.x1, annotation.y1, annotation.x2 - annotation.x1, annotation.y2 - annotation.y1);
+        } else if (annotation.type === 'circle') {
+          const radius = Math.sqrt(((annotation.x2 - annotation.x1) ** 2) + ((annotation.y2 - annotation.y1) ** 2));
+          ctx.beginPath();
+          ctx.arc(annotation.x1, annotation.y1, radius, 0, Math.PI * 2);
+          ctx.stroke();
+        } else if (annotation.type === 'text') {
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'top';
+          ctx.font = `700 ${annotation.fontSize}px Inter, Sarabun, sans-serif`;
+          ctx.strokeStyle = 'rgba(15, 23, 42, 0.75)';
+          ctx.lineWidth = Math.max(2, annotation.size * 0.35);
+          ctx.strokeText(annotation.text, annotation.x, annotation.y);
+          ctx.fillText(annotation.text, annotation.x, annotation.y);
+        }
+
+        if (isSelected) {
+          const bounds = getAnnotationBounds(annotation);
+          if (bounds) {
+            ctx.save();
+            ctx.setLineDash([10, 8]);
+            ctx.strokeStyle = 'rgba(255,255,255,0.95)';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(bounds.x - 8, bounds.y - 8, bounds.width + 16, bounds.height + 16);
+            ctx.restore();
+          }
+        }
+
+        ctx.restore();
+      };
+
+      const renderCanvas = (previewAnnotation = null, overrideAnnotations = null, overrideSelectedId = selectedAnnotationId) => {
+        const canvas = canvasRef.current;
+        if (!canvas || !baseImageElement) return;
+        const ctx = canvas.getContext('2d');
+        const width = canvas.width;
+        const height = canvas.height;
+
+        ctx.clearRect(0, 0, width, height);
+        ctx.drawImage(baseImageElement, 0, 0, width, height);
+        ctx.font = `700 ${Math.max(15, Math.round(width * 0.024))}px Inter, Sarabun, sans-serif`;
+        drawOverlay(ctx, width, height, locationLabel, overlayTimestamp);
+
+        const items = overrideAnnotations || annotations;
+        items.forEach(item => drawSingleAnnotation(ctx, item, item.id === overrideSelectedId));
+        if (previewAnnotation) drawSingleAnnotation(ctx, previewAnnotation, false);
+      };
+
+      const distanceToSegment = (point, start, end) => {
+        const dx = end.x - start.x;
+        const dy = end.y - start.y;
+        if (dx === 0 && dy === 0) return Math.hypot(point.x - start.x, point.y - start.y);
+        const t = Math.max(0, Math.min(1, (((point.x - start.x) * dx) + ((point.y - start.y) * dy)) / ((dx * dx) + (dy * dy))));
+        const projection = { x: start.x + (t * dx), y: start.y + (t * dy) };
+        return Math.hypot(point.x - projection.x, point.y - projection.y);
+      };
+
+      const hitTestAnnotation = (annotation, point) => {
+        const threshold = Math.max(12, annotation.size * 2.5);
+        if (annotation.type === 'text') {
+          const bounds = getAnnotationBounds(annotation);
+          return bounds && point.x >= bounds.x - 8 && point.x <= bounds.x + bounds.width + 8 && point.y >= bounds.y - 8 && point.y <= bounds.y + bounds.height + 8;
+        }
+        if (annotation.type === 'pen') {
+          const points = annotation.points || [];
+          for (let i = 0; i < points.length - 1; i += 1) {
+            if (distanceToSegment(point, points[i], points[i + 1]) <= threshold) return true;
+          }
+          return false;
+        }
+        if (annotation.type === 'rect') {
+          const bounds = getAnnotationBounds(annotation);
+          if (!bounds) return false;
+          const onVertical = Math.abs(point.x - bounds.x) <= threshold || Math.abs(point.x - (bounds.x + bounds.width)) <= threshold;
+          const onHorizontal = Math.abs(point.y - bounds.y) <= threshold || Math.abs(point.y - (bounds.y + bounds.height)) <= threshold;
+          const withinY = point.y >= bounds.y - threshold && point.y <= bounds.y + bounds.height + threshold;
+          const withinX = point.x >= bounds.x - threshold && point.x <= bounds.x + bounds.width + threshold;
+          return (onVertical && withinY) || (onHorizontal && withinX);
+        }
+        if (annotation.type === 'circle') {
+          const radius = Math.sqrt(((annotation.x2 - annotation.x1) ** 2) + ((annotation.y2 - annotation.y1) ** 2));
+          const distance = Math.hypot(point.x - annotation.x1, point.y - annotation.y1);
+          return Math.abs(distance - radius) <= threshold;
+        }
+        return distanceToSegment(point, { x: annotation.x1, y: annotation.y1 }, { x: annotation.x2, y: annotation.y2 }) <= threshold;
+      };
+
+      const findAnnotationAtPoint = (point) => {
+        for (let i = annotations.length - 1; i >= 0; i -= 1) {
+          if (hitTestAnnotation(annotations[i], point)) return annotations[i];
+        }
+        return null;
+      };
+
+      const translateAnnotation = (annotation, dx, dy) => {
+        if (!annotation) return annotation;
+        if (annotation.type === 'pen') {
+          return {
+            ...annotation,
+            points: (annotation.points || []).map(point => ({ x: point.x + dx, y: point.y + dy }))
+          };
+        }
+        if (annotation.type === 'text') {
+          return { ...annotation, x: annotation.x + dx, y: annotation.y + dy };
+        }
+        return {
+          ...annotation,
+          x1: annotation.x1 + dx,
+          y1: annotation.y1 + dy,
+          x2: annotation.x2 + dx,
+          y2: annotation.y2 + dy
+        };
+      };
+
+      const handleUndo = () => {
+        if (historyRef.current.length <= 1) return;
+        historyRef.current = historyRef.current.slice(0, -1);
+        const previous = cloneAnnotations(historyRef.current[historyRef.current.length - 1]);
+        setAnnotations(previous);
+        setSelectedAnnotationId(null);
+        setDraftShape(null);
       };
 
       const handleClearDrawing = () => {
-        if (baseImgData && canvasRef.current) {
-          const ctx = canvasRef.current.getContext('2d');
-          ctx.putImageData(baseImgData, 0, 0);
-        }
+        pushHistory(annotations);
+        setAnnotations([]);
+        setSelectedAnnotationId(null);
+        setDraftShape(null);
+        setDragState(null);
+      };
+
+      const handleDeleteSelected = () => {
+        if (!selectedAnnotationId) return;
+        pushHistory(annotations);
+        setAnnotations(annotations.filter(item => item.id !== selectedAnnotationId));
+        setSelectedAnnotationId(null);
       };
 
       const handleSave = () => {
-        const dataUrl = canvasRef.current.toDataURL('image/jpeg', 0.8);
+        const dataUrl = canvasRef.current.toDataURL('image/jpeg', 0.9);
         onSave(field, dataUrl);
       };
 
-      const colors = ['#ef4444', '#3b82f6', '#22c55e', '#eab308']; 
+      useEffect(() => {
+        let cancelled = false;
+
+        const resolveLocationLabel = async (latitude, longitude) => {
+          try {
+            const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`, {
+              headers: { 'Accept': 'application/json' }
+            });
+            if (!response.ok) throw new Error('Reverse geocode failed');
+            const data = await response.json();
+            const address = data.address || {};
+            const primary = [address.road, address.suburb || address.neighbourhood, address.city || address.town || address.village, address.state]
+              .filter(Boolean)
+              .slice(0, 3)
+              .join(', ');
+            return primary || data.display_name || `Lat ${latitude.toFixed(5)}, Lng ${longitude.toFixed(5)}`;
+          } catch (error) {
+            return `Lat ${latitude.toFixed(5)}, Lng ${longitude.toFixed(5)}`;
+          }
+        };
+
+        const initializeCanvas = (locationText, timestampText) => {
+          const canvas = canvasRef.current;
+          if (!canvas) return;
+          const img = new Image();
+          img.onload = () => {
+            if (cancelled) return;
+            const MAX_WIDTH = 1280;
+            const MAX_HEIGHT = 1280;
+            let width = img.width;
+            let height = img.height;
+
+            if (width > height) {
+              if (width > MAX_WIDTH) {
+                height = Math.round((height * MAX_WIDTH) / width);
+                width = MAX_WIDTH;
+              }
+            } else if (height > MAX_HEIGHT) {
+              width = Math.round((width * MAX_HEIGHT) / height);
+              height = MAX_HEIGHT;
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+            setBaseImageElement(img);
+            setAnnotations([]);
+            setSelectedAnnotationId(null);
+            setDraftShape(null);
+            setDragState(null);
+            historyRef.current = [[]];
+          };
+          img.src = imageSrc;
+        };
+
+        const initialTimestamp = new Date().toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' });
+        setOverlayTimestamp(initialTimestamp);
+
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            async (pos) => {
+              const resolved = await resolveLocationLabel(pos.coords.latitude, pos.coords.longitude);
+              if (cancelled) return;
+              setLocationLabel(resolved);
+              initializeCanvas(resolved, initialTimestamp);
+            },
+            () => {
+              const fallback = 'Location: ไม่สามารถดึงพิกัดได้';
+              if (cancelled) return;
+              setLocationLabel(fallback);
+              initializeCanvas(fallback, initialTimestamp);
+            },
+            { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
+          );
+        } else {
+          const fallback = 'Location: ไม่รองรับการดึงพิกัด';
+          setLocationLabel(fallback);
+          initializeCanvas(fallback, initialTimestamp);
+        }
+
+        return () => {
+          cancelled = true;
+        };
+      }, [imageSrc]);
+
+      useEffect(() => {
+        renderCanvas(draftShape);
+      }, [baseImageElement, annotations, draftShape, selectedAnnotationId, locationLabel, overlayTimestamp]);
+
+      const startDrawing = (e) => {
+        const point = getCanvasPoint(e);
+
+        if (tool === 'move') {
+          const picked = findAnnotationAtPoint(point);
+          if (!picked) {
+            setSelectedAnnotationId(null);
+            setDragState(null);
+            return;
+          }
+          pushHistory(annotations);
+          setSelectedAnnotationId(picked.id);
+          setDragState({ annotationId: picked.id, startPoint: point, original: cloneAnnotations(annotations) });
+          return;
+        }
+
+        if (tool === 'text') {
+          const text = window.prompt('กรอกข้อความที่ต้องการใส่บนรูปภาพ');
+          if (!text) return;
+          const canvas = canvasRef.current;
+          const nextAnnotation = {
+            id: createAnnotationId(),
+            type: 'text',
+            text,
+            x: point.x,
+            y: point.y,
+            color,
+            size: Math.max(2, brushSize * 0.35),
+            fontSize: Math.max(18, Math.round(canvas.width * 0.028 * fontScale))
+          };
+          pushHistory(annotations);
+          setAnnotations([...annotations, nextAnnotation]);
+          setSelectedAnnotationId(nextAnnotation.id);
+          return;
+        }
+
+        setSelectedAnnotationId(null);
+        setShapeStart(point);
+        if (tool === 'pen') {
+          setDraftShape({
+            id: createAnnotationId(),
+            type: 'pen',
+            color,
+            size: Math.max(2, brushSize * ((canvasRef.current?.width || 800) / 800)),
+            points: [point]
+          });
+          return;
+        }
+
+        setDraftShape({
+          id: createAnnotationId(),
+          type: tool,
+          color,
+          size: Math.max(2, brushSize * ((canvasRef.current?.width || 800) / 800)),
+          x1: point.x,
+          y1: point.y,
+          x2: point.x,
+          y2: point.y
+        });
+      };
+
+      const draw = (e) => {
+        const point = getCanvasPoint(e);
+
+        if (tool === 'move') {
+          if (!dragState) return;
+          if (e.cancelable) e.preventDefault();
+          const dx = point.x - dragState.startPoint.x;
+          const dy = point.y - dragState.startPoint.y;
+          const moved = dragState.original.map(item => item.id === dragState.annotationId ? translateAnnotation(item, dx, dy) : item);
+          setAnnotations(moved);
+          return;
+        }
+
+        if (!shapeStart || !draftShape) return;
+        if (e.cancelable) e.preventDefault();
+
+        if (tool === 'pen') {
+          setDraftShape(prev => ({ ...prev, points: [...prev.points, point] }));
+          return;
+        }
+
+        setDraftShape(prev => ({ ...prev, x2: point.x, y2: point.y }));
+      };
+
+      const finishDrawing = () => {
+        if (tool === 'move') {
+          setDragState(null);
+          return;
+        }
+
+        if (!draftShape) {
+          setShapeStart(null);
+          return;
+        }
+
+        if (draftShape.type === 'pen' && (!draftShape.points || !draftShape.points.length)) {
+          setDraftShape(null);
+          setShapeStart(null);
+          return;
+        }
+
+        if (draftShape.type !== 'pen') {
+          const bounds = getAnnotationBounds(draftShape);
+          if (!bounds || (bounds.width < 3 && bounds.height < 3)) {
+            setDraftShape(null);
+            setShapeStart(null);
+            return;
+          }
+        }
+
+        pushHistory(annotations);
+        setAnnotations([...annotations, draftShape]);
+        setSelectedAnnotationId(draftShape.id);
+        setDraftShape(null);
+        setShapeStart(null);
+      };
+
+      const colors = ['#ef4444', '#f97316', '#3b82f6', '#22c55e', '#a855f7', '#ffffff'];
+      const tools = [
+        { id: 'move', label: 'Move', icon: Icons.Move },
+        { id: 'pen', label: 'วาด', icon: Icons.Edit },
+        { id: 'rect', label: 'กรอบ', icon: Icons.Square },
+        { id: 'circle', label: 'วงกลม', icon: Icons.Circle },
+        { id: 'text', label: 'ข้อความ', icon: Icons.Type }
+      ];
 
       return (
-        <div className="fixed inset-0 bg-gray-900/95 z-[60] flex flex-col items-center justify-center p-4">
-          <div className="text-white mb-2 flex justify-between w-full max-w-2xl items-center">
-            <span className="font-bold">ใช้นิ้ววาดเพื่อเน้นจุด</span>
+        <div className="fixed inset-0 bg-gray-900/95 z-[60] flex flex-col items-center justify-center p-3 md:p-4">
+          <div className="text-white mb-3 flex justify-between w-full max-w-5xl items-center gap-4">
+            <div>
+              <span className="font-bold text-lg">แก้ไขและใส่ข้อมูลบนรูปภาพ</span>
+              <div className="text-xs md:text-sm text-slate-300 mt-1">ระบบจะใส่เวลาและตำแหน่งให้อัตโนมัติ พร้อมรองรับ tablet/mobile</div>
+            </div>
             <button onClick={onClose} className="text-gray-400 hover:text-white p-2 bg-gray-800 rounded-full"><Icons.X className="w-5 h-5"/></button>
           </div>
           
-          <div className="relative border border-gray-600 bg-black overflow-hidden w-full max-w-2xl rounded-xl shadow-2xl mb-4" style={{ maxHeight: '65vh' }}>
-            <canvas 
-              ref={canvasRef}
-              onMouseDown={startDrawing} onMouseUp={finishDrawing} onMouseMove={draw} onMouseLeave={finishDrawing}
-              onTouchStart={startDrawing} onTouchEnd={finishDrawing} onTouchMove={draw}
-              className="w-full h-auto touch-none cursor-crosshair"
-            />
-          </div>
+          <div className="w-full max-w-5xl flex flex-col gap-4 items-start">
+            <div className="relative border border-gray-600 bg-black overflow-hidden w-full rounded-3xl shadow-2xl" style={{ maxHeight: '72vh' }}>
+              <div className="absolute top-3 right-3 z-10 max-h-[calc(100%-24px)] w-[76px] md:w-[88px] overflow-y-auto no-scrollbar rounded-2xl bg-slate-900/88 border border-slate-700 shadow-xl backdrop-blur-md p-2 flex flex-col gap-2">
+                {tools.map(item => {
+                  const Icon = item.icon;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => setTool(item.id)}
+                      className={`min-h-[56px] rounded-2xl text-[11px] md:text-xs font-semibold transition-all flex flex-col items-center justify-center gap-1 px-2 py-2 ${tool === item.id ? 'bg-brand-500 text-white shadow-lg shadow-brand-900/20' : 'bg-slate-800/90 text-slate-100 hover:bg-slate-700'}`}
+                    >
+                      <Icon className="w-4 h-4 md:w-5 md:h-5" />
+                      <span className="leading-tight text-center">{item.label}</span>
+                    </button>
+                  );
+                })}
+                <button onClick={() => setIsStylePanelOpen(prev => !prev)} className={`min-h-[56px] rounded-2xl text-[11px] md:text-xs font-semibold transition-all flex flex-col items-center justify-center gap-1 px-2 py-2 ${isStylePanelOpen ? 'bg-cyan-500 text-white shadow-lg shadow-cyan-900/20' : 'bg-slate-800/90 text-slate-100 hover:bg-slate-700'}`}>
+                  <Icons.File className="w-4 h-4" /> ตั้งค่า
+                </button>
+                <button onClick={handleUndo} disabled={historyRef.current.length <= 1} className={`min-h-[56px] rounded-2xl text-[11px] md:text-xs font-semibold transition-all flex flex-col items-center justify-center gap-1 px-2 py-2 ${historyRef.current.length <= 1 ? 'bg-slate-800/60 text-slate-500 cursor-not-allowed' : 'bg-slate-800/90 text-slate-100 hover:bg-slate-700'}`}>
+                  <Icons.Undo className="w-4 h-4" /> ย้อนกลับ
+                </button>
+                <button onClick={handleDeleteSelected} disabled={!selectedAnnotationId} className={`min-h-[56px] rounded-2xl text-[11px] md:text-xs font-semibold transition-all flex flex-col items-center justify-center gap-1 px-2 py-2 ${!selectedAnnotationId ? 'bg-slate-800/60 text-slate-500 cursor-not-allowed' : 'bg-amber-500/90 text-white hover:bg-amber-500'}`}>
+                  <Icons.Trash className="w-4 h-4" /> ลบชิ้น
+                </button>
+                <button onClick={handleClearDrawing} className="min-h-[56px] rounded-2xl text-[11px] md:text-xs font-semibold transition-all flex flex-col items-center justify-center gap-1 px-2 py-2 bg-rose-500/90 text-white hover:bg-rose-500">
+                  <Icons.Trash className="w-4 h-4" /> ลบเส้น
+                </button>
+              </div>
 
-          <div className="flex items-center gap-4 bg-gray-800 p-3 rounded-2xl w-full max-w-2xl justify-between shadow-lg">
-            <div className="flex gap-3 items-center">
-               {colors.map(c => (
-                  <button 
-                    key={c} 
-                    onClick={() => setColor(c)} 
-                    className={`w-8 h-8 rounded-full border-2 transition-transform ${color === c ? 'border-white scale-110 shadow-lg' : 'border-transparent opacity-80 hover:opacity-100'}`} 
-                    style={{backgroundColor: c}}
-                  ></button>
-               ))}
+              {isStylePanelOpen && (
+                <div className="absolute top-3 right-[92px] md:right-[104px] z-10 w-[min(320px,calc(100%-116px))] rounded-2xl bg-slate-900/88 border border-slate-700 shadow-xl backdrop-blur-md p-3">
+                  <div className="text-slate-100 text-sm font-bold mb-3 flex items-center justify-between">
+                    <span>ตั้งค่าการวาด</span>
+                    <button onClick={() => setIsStylePanelOpen(false)} className="text-slate-400 hover:text-white p-1 rounded-lg bg-slate-800/80"><Icons.X className="w-4 h-4" /></button>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 mb-3">
+                    {colors.map(c => (
+                      <button
+                        key={c}
+                        onClick={() => setColor(c)}
+                        className={`w-8 h-8 rounded-full border-2 transition-transform ${color === c ? 'border-white scale-110 shadow-lg' : 'border-white/20 opacity-90 hover:opacity-100'}`}
+                        style={{ backgroundColor: c }}
+                      ></button>
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-1 gap-3 text-slate-100 text-xs">
+                    <label className="flex items-center gap-3">
+                      <span className="w-16 shrink-0">เส้น {brushSize}px</span>
+                      <input type="range" min="2" max="18" value={brushSize} onChange={e => setBrushSize(Number(e.target.value))} className="w-full accent-brand-500" />
+                    </label>
+                    <label className="flex items-center gap-3">
+                      <span className="w-16 shrink-0">Text {fontScale.toFixed(1)}x</span>
+                      <input type="range" min="0.8" max="1.8" step="0.1" value={fontScale} onChange={e => setFontScale(Number(e.target.value))} className="w-full accent-brand-500" />
+                    </label>
+                  </div>
+                  <div className="mt-3 text-[11px] text-slate-300 leading-relaxed">
+                    {tool === 'move' ? 'เลือก Move แล้วแตะเส้น/กรอบ/ข้อความเพื่อย้ายตำแหน่ง' : 'เลือกสีและขนาดก่อนวาด ระบบจะใช้ค่าปัจจุบันกับ annotation ชิ้นใหม่'}
+                  </div>
+                </div>
+              )}
+
+              <canvas 
+                ref={canvasRef}
+                onMouseDown={startDrawing} onMouseUp={finishDrawing} onMouseMove={draw} onMouseLeave={finishDrawing}
+                onTouchStart={startDrawing} onTouchEnd={finishDrawing} onTouchMove={draw}
+                className={`w-full h-auto touch-none ${tool === 'move' ? 'cursor-grab' : 'cursor-crosshair'}`}
+              />
             </div>
-            <button onClick={handleClearDrawing} className="text-sm font-semibold text-gray-300 hover:text-white flex items-center gap-1.5 bg-gray-700 px-3 py-2 rounded-xl transition-colors">
-               <Icons.Refresh className="w-4 h-4" /> ลบเส้นวาด
-            </button>
           </div>
 
-          <div className="flex gap-4 mt-4 w-full max-w-2xl">
+          <div className="flex gap-3 md:gap-4 mt-4 w-full max-w-5xl">
             <button onClick={onClose} className="flex-1 py-3.5 bg-gray-800 hover:bg-gray-700 border border-gray-600 transition-colors text-white rounded-xl font-bold">ยกเลิก</button>
-            <button onClick={handleSave} className="flex-1 py-3.5 bg-brand-600 hover:bg-brand-500 transition-colors text-white rounded-xl font-bold flex items-center justify-center shadow-lg shadow-brand-200/50">
+            <button onClick={handleSave} className="flex-1 py-3.5 bg-brand-600 hover:bg-brand-700 text-white rounded-xl font-bold flex items-center justify-center shadow-lg shadow-brand-200/50">
               <span className="mr-2"><Icons.CheckCircle/></span> ยืนยันรูปภาพ
             </button>
           </div>
@@ -579,30 +1023,94 @@
         imgDuring: defect?.imgDuring || '',
         imgAfter: defect?.imgAfter || ''
       });
+      const [previewDataUrls, setPreviewDataUrls] = useState({});
       const [uploadingField, setUploadingField] = useState(null);
       const [isSavingStatus, setIsSavingStatus] = useState(false);
       const [editingImage, setEditingImage] = useState(null);
+      const [previewImage, setPreviewImage] = useState(null);
 
       const isTaskActive = taskStatus === 'Active';
       const isTaskRejected = taskStatus === 'Reject';
       const isTaskClosed = taskStatus === 'Closed';
       const isDefectFixed = defect?.status === 'แก้ไขแล้ว';
 
+      useEffect(() => {
+        setImages({
+          imgUnit: defect?.imgUnit || '',
+          imgBefore: defect?.imgBefore || '',
+          imgDuring: defect?.imgDuring || '',
+          imgAfter: defect?.imgAfter || ''
+        });
+      }, [defect?.id, defect?.imgUnit, defect?.imgBefore, defect?.imgDuring, defect?.imgAfter]);
+
+      useEffect(() => {
+        let cancelled = false;
+        const fields = ['imgUnit', 'imgBefore', 'imgDuring', 'imgAfter'];
+
+        fields.forEach(field => {
+          const value = images[field];
+
+          if (!value) {
+            setPreviewDataUrls(prev => ({ ...prev, [field]: '' }));
+            return;
+          }
+
+          if (String(value).startsWith('data:image')) {
+            setPreviewDataUrls(prev => ({ ...prev, [field]: value }));
+            return;
+          }
+
+          google.script.run
+            .withSuccessHandler(dataUrl => {
+              if (cancelled) return;
+              setPreviewDataUrls(prev => ({ ...prev, [field]: dataUrl || value }));
+            })
+            .withFailureHandler(() => {
+              if (cancelled) return;
+              setPreviewDataUrls(prev => ({ ...prev, [field]: value }));
+            })
+            .getDefectImagePreviewDataUrl(value);
+        });
+
+        return () => {
+          cancelled = true;
+        };
+      }, [images.imgUnit, images.imgBefore, images.imgDuring, images.imgAfter]);
+
+      const getDirectImageUrl = (url) => {
+        if (!url) return '';
+        if (url.startsWith('data:image')) return url;
+        const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/) || url.match(/id=([a-zA-Z0-9_-]+)/);
+        if (match && match[1]) return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w2000`;
+        return url;
+      };
+
+      const getImageUrlCandidates = (url) => {
+        if (!url) return [];
+        if (url.startsWith('data:image')) return [url];
+        const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/) || url.match(/id=([a-zA-Z0-9_-]+)/);
+        if (match && match[1]) {
+          const fileId = match[1];
+          return [
+            `https://drive.google.com/uc?export=view&id=${fileId}`,
+            `https://drive.google.com/uc?id=${fileId}`,
+            `https://drive.google.com/thumbnail?id=${fileId}&sz=w2000`,
+            url
+          ];
+        }
+        return [url];
+      };
+
       const handleFileChange = (field, e) => {
         const file = e.target.files[0];
         if (file) {
           const reader = new FileReader();
           reader.onloadend = () => {
-            const isMobile = window.innerWidth < 768;
-            if (isMobile) {
-              setImages(prev => ({ ...prev, [field]: reader.result }));
-            } else {
-              setEditingImage({ field: field, src: reader.result });
-            }
+            setEditingImage({ field: field, src: reader.result });
           };
           reader.readAsDataURL(file);
         }
-        e.target.value = null; 
+        e.target.value = null;
       };
 
       const handleAnnotatorSave = (field, dataUrl) => {
@@ -612,6 +1120,7 @@
 
       const handleClearImage = (field) => {
         if (!window.confirm('คุณต้องการลบรูปภาพนี้ใช่หรือไม่?')) return;
+        if (!window.confirm('ยืนยันอีกครั้งเพื่อลบรูปภาพนี้')) return;
         setImages(prev => ({ ...prev, [field]: '' }));
       };
 
@@ -636,7 +1145,7 @@
           .withSuccessHandler(() => {
             alert('เปลี่ยนสถานะ Defect เป็น "แก้ไขแล้ว" สำเร็จ');
             setIsSavingStatus(false);
-            onSuccess(); 
+            onSuccess();
           })
           .withFailureHandler(err => {
             alert('เกิดข้อผิดพลาด: ' + err.message);
@@ -645,20 +1154,63 @@
           .updateDefectStatus(defect?.id, 'แก้ไขแล้ว');
       };
 
+      const ImagePreviewModal = () => {
+        const canEditPreview = previewImage && !isTaskRejected && !isTaskClosed && !isDefectFixed && images[previewImage.field] && !String(images[previewImage.field]).startsWith('http');
+        const modalPreviewSource = previewImage?.field ? (previewDataUrls[previewImage.field] || previewImage?.src || '') : (previewImage?.src || '');
+        const previewCandidates = getImageUrlCandidates(modalPreviewSource);
+        const [previewCandidateIndex, setPreviewCandidateIndex] = useState(0);
+        const activePreviewSrc = previewCandidates[Math.min(previewCandidateIndex, Math.max(previewCandidates.length - 1, 0))] || modalPreviewSource;
+
+        useEffect(() => {
+          if (modalPreviewSource) setPreviewCandidateIndex(0);
+        }, [modalPreviewSource]);
+
+        if (!previewImage) return null;
+
+        return (
+          <div className="fixed inset-0 z-[65] bg-slate-950/90 backdrop-blur-sm p-3 md:p-6 flex items-center justify-center">
+            <div className="w-full max-w-6xl h-full max-h-[92vh] bg-slate-900/95 border border-slate-700 rounded-3xl overflow-hidden flex flex-col shadow-2xl">
+              <div className="px-4 md:px-6 py-4 border-b border-slate-800 flex items-center justify-between gap-4">
+                <div>
+                  <div className="text-white text-base md:text-lg font-bold">{previewImage.label}</div>
+                  <div className="text-slate-400 text-xs md:text-sm mt-1">แตะ/คลิกดูรูปเต็ม และกดแก้ไขได้ทั้งบน mobile, tablet และ desktop</div>
+                </div>
+                <button onClick={() => setPreviewImage(null)} className="p-2 rounded-full bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 transition-colors"><Icons.X className="w-5 h-5" /></button>
+              </div>
+
+              <div className="flex-1 overflow-auto p-3 md:p-6 flex items-center justify-center bg-gradient-to-br from-slate-950 to-slate-900">
+                <img src={activePreviewSrc} alt={previewImage.label} onError={() => setPreviewCandidateIndex(prev => (prev < previewCandidates.length - 1 ? prev + 1 : prev))} className="block w-auto max-w-full h-auto max-h-full object-contain rounded-2xl shadow-2xl border border-slate-700 bg-white" loading="eager" referrerPolicy="no-referrer" />
+              </div>
+
+              <div className="px-4 md:px-6 py-4 border-t border-slate-800 flex flex-col sm:flex-row gap-3 justify-end bg-slate-900/90">
+                {canEditPreview && (
+                  <button onClick={() => { setEditingImage({ field: previewImage.field, src: images[previewImage.field] }); setPreviewImage(null); }} className="px-5 py-3 rounded-2xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-sm shadow-lg shadow-brand-900/20 flex items-center justify-center gap-2">
+                    <Icons.Edit className="w-4 h-4" /> แก้ไข / Annotate รูป
+                  </button>
+                )}
+                {!canEditPreview && images[previewImage.field] && String(images[previewImage.field]).startsWith('http') && <div className="px-4 py-3 rounded-2xl bg-emerald-500/15 border border-emerald-400/20 text-emerald-200 text-sm font-semibold">รูปนี้บันทึกแล้ว จะแก้ไขเพิ่มเติมไม่ได้</div>}
+                <button onClick={() => setPreviewImage(null)} className="px-5 py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-100 font-bold text-sm">ปิดหน้าดูรูป</button>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
       const ImageBox = ({ label, field, disabledReason }) => {
         const isDisabled = !!disabledReason;
         const currentImg = images[field];
         const isBase64 = currentImg && currentImg.startsWith('data:image');
         const isUploaded = currentImg && currentImg.startsWith('http');
         const isUploading = uploadingField === field;
+        const canEditImage = !isDisabled && !isTaskRejected && !isTaskClosed && !isDefectFixed && !isUploaded;
+        const resolvedPreviewSource = previewDataUrls[field] || currentImg;
+        const previewCandidates = getImageUrlCandidates(resolvedPreviewSource);
+        const [previewCandidateIndex, setPreviewCandidateIndex] = useState(0);
+        const previewSrc = previewCandidates[Math.min(previewCandidateIndex, Math.max(previewCandidates.length - 1, 0))] || getDirectImageUrl(resolvedPreviewSource);
 
-        const getDirectImageUrl = (url) => {
-          if (!url) return '';
-          if (url.startsWith('data:image')) return url;
-          const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/) || url.match(/id=([a-zA-Z0-9_-]+)/);
-          if (match && match[1]) return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w1000`;
-          return url;
-        };
+        useEffect(() => {
+          setPreviewCandidateIndex(0);
+        }, [resolvedPreviewSource]);
 
         return (
           <div className={`relative border rounded-2xl p-4 md:p-5 flex flex-col items-center justify-between shadow-sm transition-all ${isDisabled ? 'bg-gray-50 border-gray-200' : isBase64 ? 'bg-brand-50 border-brand-300' : 'bg-white border-gray-200 hover:border-brand-400'}`}>
@@ -666,16 +1218,42 @@
             
             <div className="flex-1 w-full flex flex-col items-center justify-center mb-4 md:mb-5 relative">
               {currentImg ? (
-                <div className="relative group w-full flex justify-center h-48 md:h-64">
-                  <img src={getDirectImageUrl(currentImg)} alt={label} className={`w-full h-full object-cover rounded-xl border border-gray-200 shadow-sm ${isDisabled ? 'opacity-50' : ''}`} />
+                <div className="relative group w-full min-h-[224px] sm:min-h-[240px] md:min-h-[256px] lg:min-h-[288px] flex items-center justify-center cursor-zoom-in bg-slate-100 rounded-xl overflow-hidden p-2">
+                  <img src={previewSrc} alt={label} onClick={() => setPreviewImage({ field, label, src: resolvedPreviewSource })} onError={() => setPreviewCandidateIndex(prev => (prev < previewCandidates.length - 1 ? prev + 1 : prev))} className={`block max-w-full max-h-[272px] sm:max-h-[304px] md:max-h-[336px] lg:max-h-[384px] w-auto h-auto object-contain rounded-xl border border-gray-200 shadow-sm bg-white ${isDisabled ? 'opacity-50' : ''}`} loading="eager" referrerPolicy="no-referrer" />
+
+
+                  <div className="absolute inset-x-3 bottom-3 flex items-center justify-between gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+
+                        setPreviewImage({ field, label, src: resolvedPreviewSource });
+                      }}
+                      className="flex-1 bg-slate-900/78 text-white px-3 py-2 rounded-xl text-xs md:text-sm font-semibold backdrop-blur-sm border border-white/10 flex items-center justify-center gap-2"
+                    >
+                      <Icons.Eye className="w-4 h-4" /> ดูรูปเต็ม
+                    </button>
+
+                    {canEditImage && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingImage({ field, src: currentImg });
+                        }}
+                        className="bg-brand-500/95 text-white px-3 py-2 rounded-xl text-xs md:text-sm font-semibold shadow-lg shadow-brand-900/20 border border-brand-300/30 flex items-center justify-center gap-2"
+                      >
+                        <Icons.Edit className="w-4 h-4" /> แก้ไข
+                      </button>
+                    )}
+                  </div>
                   
                   {!isDisabled && !isTaskRejected && !isTaskClosed && !isDefectFixed && (
                     <button 
-                       onClick={(e) => { e.stopPropagation(); handleClearImage(field); }} 
-                       className="absolute top-2 left-2 bg-white/90 text-red-500 p-2 rounded-full shadow-md hover:bg-red-50 hover:text-red-600 transition-colors"
-                       title="ลบรูปภาพเพื่อเลือกใหม่"
+                      onClick={(e) => { e.stopPropagation(); handleClearImage(field); }} 
+                      className="absolute top-2 left-2 bg-white/90 text-red-500 p-2 rounded-full shadow-md hover:bg-red-50 hover:text-red-600 transition-colors"
+                      title="ลบรูปภาพเพื่อเลือกใหม่"
                     >
-                       <Icons.Trash className="w-4 h-4" />
+                      <Icons.Trash className="w-4 h-4" />
                     </button>
                   )}
 
@@ -729,13 +1307,14 @@
       return (
         <div className="w-full">
           {editingImage && <ImageAnnotator imageSrc={editingImage.src} field={editingImage.field} onSave={handleAnnotatorSave} onClose={() => setEditingImage(null)} />}
+          {previewImage && <ImagePreviewModal />}
           {uploadingField && <FullScreenLoader message="กำลังอัปโหลดรูปภาพ..." />}
           {isSavingStatus && <FullScreenLoader message="กำลังอัปเดตสถานะ..." />}
 
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
             <div>
               <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">จัดการรูปภาพ</h3>
-              <p className="text-sm text-gray-500 mt-1">อัปโหลดและบันทึกภาพให้ครบทั้ง 4 ขั้นตอนเพื่อจบงาน</p>
+              <p className="text-sm text-gray-500 mt-1">แตะรูปเพื่อดูเต็มจอ และแก้ไข/annotate พร้อมเวลาและตำแหน่งได้ทั้งบน mobile, tablet และ desktop</p>
             </div>
             <div className="text-right w-full md:w-auto">
               {!isTaskActive && !isTaskRejected && !isTaskClosed && <span className="inline-block px-3 py-1.5 bg-gradient-to-br from-amber-50 to-yellow-100 text-amber-700 text-sm font-bold rounded-md border border-amber-200 shadow-sm w-full md:w-auto text-center">⚠️ ต้องเปิดใบงาน (Active) ก่อน</span>}
@@ -758,11 +1337,11 @@
               className={`px-8 py-3.5 text-white rounded-xl flex items-center font-bold text-sm transition-all w-full md:w-auto justify-center ${
                 isDefectFixed || isTaskClosed ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
                 : !allImagesUploadedAndSaved ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
-                : 'bg-emerald-600 hover:bg-emerald-700 shadow-md shadow-emerald-200 hover:-translate-y-0.5'
+                : 'bg-gradient-to-r from-brand-500 to-emerald-500 hover:from-brand-600 hover:to-emerald-600 shadow-md shadow-emerald-200 hover:-translate-y-0.5'
               }`}
             >
-              {isDefectFixed ? '✅ แก้ไขเสร็จสิ้นแล้ว' : 
-               <React.Fragment><span className="mr-2"><Icons.CheckCircle/></span> ยืนยันแก้ไขเสร็จสิ้น</React.Fragment>}
+              {isDefectFixed ? <React.Fragment><span className="mr-2"><Icons.CheckCircle className="w-5 h-5" /></span> แก้ไขเสร็จสิ้นแล้ว</React.Fragment> : 
+               <React.Fragment><span className="mr-2"><Icons.CheckCircle className="w-5 h-5" /></span> ยืนยันแก้ไขเสร็จสิ้น</React.Fragment>}
             </button>
           </div>
         </div>
@@ -796,6 +1375,8 @@
       const [isDeleting, setIsDeleting] = useState(false);
       const [isExportingPDF, setIsExportingPDF] = useState(false);
       const [pdfLinks, setPdfLinks] = useState([]);
+      const [isTaskPlanSelectorOpen, setIsTaskPlanSelectorOpen] = useState(false);
+      const [selectedTaskPlanIds, setSelectedTaskPlanIds] = useState([]);
 
       const [activeJobId, setActiveJobId] = useState(null);
       const [activeTaskId, setActiveTaskId] = useState(null);
@@ -823,9 +1404,10 @@
 
       const toggleSidebar = () => setIsSidebarOpen(prev => !prev);
 
-      const isAdmin = currentUser?.isAdmin === true || currentUser?.role === 'ADMIN';
-      const isStaff = currentUser?.isStaff === true || currentUser?.role === 'STAFF';
-      const isSupplier = currentUser?.isSupplier === true || currentUser?.role === 'SUPPLIER';
+      const currentPosition = String(currentUser?.position || '').trim().toLowerCase();
+      const isAdmin = currentUser?.isAdmin === true || currentPosition === 'admin' || currentUser?.role === 'ADMIN';
+      const isStaff = currentUser?.isStaff === true || currentPosition === 'staff' || currentUser?.role === 'STAFF';
+      const isSupplier = currentUser?.isSupplier === true || currentPosition === 'supplier' || currentUser?.role === 'SUPPLIER';
       const canManageProjects = isAdmin || isStaff;
       const canManageUsers = isAdmin;
 
@@ -931,6 +1513,9 @@
       const activeJob = jobs.find(j => j.id === activeJobId);
       const activeTask = activeJob?.tasks?.find(t => t.id === activeTaskId);
       const activeDefect = activeTask?.defects?.find(d => d.id === activeDefectId);
+      const pendingTaskPlanCandidates = (activeJob?.tasks || []).filter(task => (task.status || 'รอดำเนินการ') === 'รอดำเนินการ');
+      const areAllPendingTaskPlanCandidatesSelected = pendingTaskPlanCandidates.length > 0 && selectedTaskPlanIds.length === pendingTaskPlanCandidates.length;
+      const handleToggleAllPendingTaskPlanCandidates = () => setSelectedTaskPlanIds(areAllPendingTaskPlanCandidatesSelected ? [] : pendingTaskPlanCandidates.map(task => task.id));
 
       const allTasks = jobs.flatMap(job => job.tasks || []);
       const allDefects = allTasks.flatMap(task => task.defects || []);
@@ -1033,10 +1618,26 @@
       };
 
       const handleExportTaskPlans = () => {
-        if (!activeJob?.tasks || activeJob.tasks.length === 0) return alert('ไม่มีใบงานย่อยให้ Export');
+        const pendingTasks = pendingTaskPlanCandidates;
+        if (pendingTasks.length === 0) return alert('ไม่มีใบงานย่อยสถานะรอดำเนินการให้ Export');
+        setSelectedTaskPlanIds(pendingTasks.map(task => task.id));
+        setIsTaskPlanSelectorOpen(true);
+      };
+
+      const handleConfirmExportTaskPlans = () => {
+        if (!activeJobId) return;
+        if (selectedTaskPlanIds.length === 0) return alert('กรุณาเลือกใบงานย่อยอย่างน้อย 1 รายการ');
+        setIsExportingPDF(true);
+        setIsTaskPlanSelectorOpen(false);
+        google.script.run.withSuccessHandler((res) => { setIsExportingPDF(false); setPdfLinks(JSON.parse(res)); })
+          .withFailureHandler((err) => { setIsExportingPDF(false); alert('Error: ' + err.message); }).exportTaskPlansToPDF(activeJobId, selectedTaskPlanIds);
+      };
+
+      const handleExportSingleTaskPlan = (taskId, e) => {
+        e.stopPropagation();
         setIsExportingPDF(true);
         google.script.run.withSuccessHandler((res) => { setIsExportingPDF(false); setPdfLinks(JSON.parse(res)); })
-          .withFailureHandler((err) => { setIsExportingPDF(false); alert('Error: ' + err.message); }).exportTaskPlansToPDF(activeJobId);
+          .withFailureHandler((err) => { setIsExportingPDF(false); alert('Error: ' + err.message); }).exportTaskPlansToPDF(activeJobId, taskId);
       };
 
       const handleExportDefectReport = (taskId, e) => {
@@ -1050,12 +1651,11 @@
         e.preventDefault();
         setAuthError('');
 
-        if (!authForm.userId.trim() || !authForm.password.trim()) {
-          setAuthError('กรุณากรอก User ID และ Password');
-          return;
-        }
-
         if (authMode === 'REGISTER') {
+          if (!authForm.userId.trim()) {
+            setAuthError('กรุณากรอก User ID');
+            return;
+          }
           if (!authForm.fullName.trim()) {
             setAuthError('กรุณากรอกชื่อ - นามสกุล');
             return;
@@ -1064,10 +1664,21 @@
             setAuthError('กรุณาเลือก Role');
             return;
           }
+          if (!authForm.password.trim()) {
+            setAuthError('กรุณากรอก Password');
+            return;
+          }
+          if (!authForm.confirmPassword.trim()) {
+            setAuthError('กรุณากรอก Confirm Password');
+            return;
+          }
           if (authForm.password !== authForm.confirmPassword) {
             setAuthError('Password และ Confirm Password ไม่ตรงกัน');
             return;
           }
+        } else if (!authForm.userId.trim() || !authForm.password.trim()) {
+          setAuthError('กรุณากรอก User ID และ Password');
+          return;
         }
 
         setAuthLoading(true);
@@ -1075,18 +1686,24 @@
         if (authMode === 'LOGIN') {
           google.script.run
             .withSuccessHandler(user => {
-              sessionStorage.setItem('sas_user', JSON.stringify(user));
-              setCurrentUser(user);
-              setProfileForm({
-                fullName: user.fullName || '',
-                email: user.email || '',
-                line: user.line || '',
-                phone: user.phone || '',
-                password: '',
-                confirmPassword: ''
-              });
-              setView(user?.isSupplier && !user?.isAdmin && !user?.isStaff ? 'SUPPLIER_DEFECTS' : 'DASHBOARD');
-              setAuthLoading(false);
+              try {
+                sessionStorage.setItem('sas_user', JSON.stringify(user));
+                setCurrentUser(user);
+                setProfileForm({
+                  fullName: user.fullName || '',
+                  email: user.email || '',
+                  line: user.line || '',
+                  phone: user.phone || '',
+                  password: '',
+                  confirmPassword: ''
+                });
+                setView(user?.isSupplier && !user?.isAdmin && !user?.isStaff ? 'SUPPLIER_DEFECTS' : 'DASHBOARD');
+              } catch (callbackError) {
+                console.error('Login success handler failed:', callbackError);
+                setAuthError(callbackError?.message || 'เกิดข้อผิดพลาดหลังจากเข้าสู่ระบบ');
+              } finally {
+                setAuthLoading(false);
+              }
             })
             .withFailureHandler(err => {
               setAuthError(err.message || 'ไม่สามารถเข้าสู่ระบบได้');
@@ -1117,27 +1734,6 @@
             line: authForm.line,
             phone: authForm.phone
           });
-      };
-
-      const handleUpdateManagedUser = (userId, payload) => {
-        if (!currentUser?.userId) return;
-        setIsSaving(true);
-        google.script.run
-          .withSuccessHandler(updatedUserJson => {
-            const updatedUser = JSON.parse(updatedUserJson);
-            setManagedUsers(prev => prev.map(user => user.userId === userId ? updatedUser : user));
-            if (currentUser?.userId === userId) {
-              sessionStorage.setItem('sas_user', JSON.stringify(updatedUser));
-              setCurrentUser(updatedUser);
-            }
-            setIsSaving(false);
-            alert('บันทึกข้อมูลและสิทธิ์ผู้ใช้งานสำเร็จ');
-          })
-          .withFailureHandler(err => {
-            alert('เกิดข้อผิดพลาดในการบันทึกข้อมูลผู้ใช้งาน: ' + err.message);
-            setIsSaving(false);
-          })
-          .updateManagedUser(currentUser.userId, { userId, ...payload });
       };
 
       const handleSaveProfile = () => {
@@ -1749,9 +2345,13 @@
       };
 
       const UserManagementView = () => {
+        const emptyNewUserForm = { userId: '', fullName: '', roleValue: 'SAS Staff', position: 'Staff', password: '', confirmPassword: '', email: '', line: '', phone: '', team: '', approved: false };
         const pendingUsersCount = managedUsers.filter(user => !user.approved).length;
-        const [newUserForm, setNewUserForm] = useState({ userId: '', fullName: '', roleValue: '', password: '', confirmPassword: '', email: '', line: '', phone: '' });
+        const approvedUsersCount = managedUsers.filter(user => user.approved).length;
+        const [newUserForm, setNewUserForm] = useState(emptyNewUserForm);
         const [drafts, setDrafts] = useState({});
+        const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
+        const [expandedUserId, setExpandedUserId] = useState(null);
 
         const getDraft = (user) => drafts[user.userId] || {
           fullName: user.fullName || '',
@@ -1783,8 +2383,74 @@
 
         const handleCreateManagedUser = () => {
           handleAddManagedUser(newUserForm);
-          setNewUserForm({ userId: '', fullName: '', roleValue: '', password: '', confirmPassword: '', email: '', line: '', phone: '' });
+          setNewUserForm(emptyNewUserForm);
+          setIsAddUserModalOpen(false);
         };
+
+        const renderAccountFormFields = (formData, setFormData, mode = 'create') => (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
+            <label className="block">
+              <span className="block text-xs font-bold uppercase tracking-[0.18em] text-gray-500 mb-2">User ID</span>
+              <input type="text" value={formData.userId || ''} onChange={e => setFormData(prev => ({ ...prev, userId: e.target.value }))} disabled={mode !== 'create'} className={`w-full rounded-2xl border border-gray-200 bg-white px-4 py-3.5 text-sm text-gray-800 outline-none transition focus:border-brand-500 ${mode !== 'create' ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : ''}`} placeholder="เช่น test01" />
+            </label>
+            <label className="block">
+              <span className="block text-xs font-bold uppercase tracking-[0.18em] text-gray-500 mb-2">Full Name</span>
+              <input type="text" value={formData.fullName || ''} onChange={e => setFormData(prev => ({ ...prev, fullName: e.target.value }))} className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3.5 text-sm text-gray-800 outline-none transition focus:border-brand-500" placeholder="ชื่อ - นามสกุล" />
+            </label>
+            <label className="block">
+              <span className="block text-xs font-bold uppercase tracking-[0.18em] text-gray-500 mb-2">Role</span>
+              <select value={formData.roleValue || ''} onChange={e => {
+                const roleValue = e.target.value;
+                setFormData(prev => ({
+                  ...prev,
+                  roleValue,
+                  position: roleValue === 'Supplier' ? 'Supplier' : (prev.position === 'Supplier' ? 'Staff' : (prev.position || 'Staff'))
+                }));
+              }} className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3.5 text-sm text-gray-800 outline-none transition focus:border-brand-500">
+                <option value="" disabled>เลือกบทบาท</option>
+                {USER_ROLE_OPTIONS.map(option => <option key={option} value={option}>{option}</option>)}
+              </select>
+            </label>
+            <label className="block">
+              <span className="block text-xs font-bold uppercase tracking-[0.18em] text-gray-500 mb-2">Position</span>
+              <select value={formData.position || ''} onChange={e => setFormData(prev => ({ ...prev, position: e.target.value }))} className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3.5 text-sm text-gray-800 outline-none transition focus:border-brand-500">
+                <option value="" disabled>เลือกตำแหน่ง</option>
+                {USER_POSITION_OPTIONS.map(option => <option key={option} value={option}>{option}</option>)}
+              </select>
+            </label>
+            <label className="block">
+              <span className="block text-xs font-bold uppercase tracking-[0.18em] text-gray-500 mb-2">Password</span>
+              <input type="text" value={formData.password || ''} onChange={e => setFormData(prev => ({ ...prev, password: e.target.value }))} className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3.5 text-sm text-gray-800 outline-none transition focus:border-brand-500" placeholder="Password" />
+            </label>
+            <label className="block">
+              <span className="block text-xs font-bold uppercase tracking-[0.18em] text-gray-500 mb-2">Confirm Password</span>
+              <input type="text" value={formData.confirmPassword || ''} onChange={e => setFormData(prev => ({ ...prev, confirmPassword: e.target.value }))} className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3.5 text-sm text-gray-800 outline-none transition focus:border-brand-500" placeholder="Confirm Password" />
+            </label>
+            <label className="block">
+              <span className="block text-xs font-bold uppercase tracking-[0.18em] text-gray-500 mb-2">Team</span>
+              <select value={formData.team || ''} onChange={e => setFormData(prev => ({ ...prev, team: e.target.value }))} className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3.5 text-sm text-gray-800 outline-none transition focus:border-brand-500">
+                <option value="">- ไม่ระบุทีมเข้าแก้ไข -</option>
+                {teams.map(team => <option key={team} value={team}>{team}</option>)}
+              </select>
+            </label>
+            <label className="block">
+              <span className="block text-xs font-bold uppercase tracking-[0.18em] text-gray-500 mb-2">Email</span>
+              <input type="email" value={formData.email || ''} onChange={e => setFormData(prev => ({ ...prev, email: e.target.value }))} className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3.5 text-sm text-gray-800 outline-none transition focus:border-brand-500" placeholder="Email" />
+            </label>
+            <label className="block">
+              <span className="block text-xs font-bold uppercase tracking-[0.18em] text-gray-500 mb-2">Line</span>
+              <input type="text" value={formData.line || ''} onChange={e => setFormData(prev => ({ ...prev, line: e.target.value }))} className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3.5 text-sm text-gray-800 outline-none transition focus:border-brand-500" placeholder="Line" />
+            </label>
+            <label className="block">
+              <span className="block text-xs font-bold uppercase tracking-[0.18em] text-gray-500 mb-2">Phone</span>
+              <input type="text" value={formData.phone || ''} onChange={e => setFormData(prev => ({ ...prev, phone: e.target.value }))} className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3.5 text-sm text-gray-800 outline-none transition focus:border-brand-500" placeholder="Phone" />
+            </label>
+            <label className="flex items-center gap-3 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3.5 text-sm font-semibold text-gray-700 md:col-span-2">
+              <input type="checkbox" checked={!!formData.approved} onChange={e => setFormData(prev => ({ ...prev, approved: e.target.checked }))} className="w-5 h-5 text-emerald-600 rounded border-gray-300 focus:ring-emerald-500" />
+              อนุมัติการใช้งานบัญชี
+            </label>
+          </div>
+        );
 
         return (
           <div className="pb-8 w-full">
@@ -1793,24 +2459,29 @@
               subtitle="ACCESS CONTROL"
               badges={['Admin Only', pendingUsersCount > 0 ? `New Users ${pendingUsersCount}` : 'No New User']}
               info={[{ value: managedUsers.length, label: 'Total Users' }, { value: pendingUsersCount, label: 'Pending Approval' }]}
-              action={<button onClick={handleCreateManagedUser} className="bg-brand-600 text-white px-3 py-2 rounded-lg text-sm font-bold hover:bg-brand-700 shadow-sm flex items-center transition-all hover:-translate-y-0.5"><Icons.Plus className="w-4 h-4 mr-1 shrink-0" /> เพิ่ม Account</button>}
+              action={<button onClick={() => { setNewUserForm(emptyNewUserForm); setIsAddUserModalOpen(true); }} className="bg-brand-600 text-white px-4 py-2.5 rounded-xl text-sm font-bold hover:bg-brand-700 shadow-sm flex items-center transition-all hover:-translate-y-0.5"><Icons.Plus className="w-4 h-4 mr-2 shrink-0" /> เพิ่ม Account</button>}
             />
-            <div className="max-w-7xl mx-auto px-6 md:px-8 space-y-5">
-              <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-5 md:p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-                  <input type="text" value={newUserForm.userId} onChange={e => setNewUserForm(prev => ({ ...prev, userId: e.target.value }))} className="w-full bg-white border border-gray-200 rounded-xl p-3 text-sm outline-none focus:border-brand-500" placeholder="User ID *" />
-                  <input type="text" value={newUserForm.fullName} onChange={e => setNewUserForm(prev => ({ ...prev, fullName: e.target.value }))} className="w-full bg-white border border-gray-200 rounded-xl p-3 text-sm outline-none focus:border-brand-500" placeholder="ชื่อ - นามสกุล *" />
-                  <select value={newUserForm.roleValue} onChange={e => setNewUserForm(prev => ({ ...prev, roleValue: e.target.value }))} className="w-full bg-white border border-gray-200 rounded-xl p-3 text-sm outline-none focus:border-brand-500"><option value="">เลือกบทบาท (Role) *</option>{USER_ROLE_OPTIONS.map(option => <option key={option} value={option}>{option}</option>)}</select>
-                  <input type="password" value={newUserForm.password} onChange={e => setNewUserForm(prev => ({ ...prev, password: e.target.value }))} className="w-full bg-white border border-gray-200 rounded-xl p-3 text-sm outline-none focus:border-brand-500" placeholder="Password *" />
-                  <input type="password" value={newUserForm.confirmPassword} onChange={e => setNewUserForm(prev => ({ ...prev, confirmPassword: e.target.value }))} className="w-full bg-white border border-gray-200 rounded-xl p-3 text-sm outline-none focus:border-brand-500" placeholder="Confirm Password *" />
-                  <input type="email" value={newUserForm.email} onChange={e => setNewUserForm(prev => ({ ...prev, email: e.target.value }))} className="w-full bg-white border border-gray-200 rounded-xl p-3 text-sm outline-none focus:border-brand-500" placeholder="Email" />
-                  <input type="text" value={newUserForm.line} onChange={e => setNewUserForm(prev => ({ ...prev, line: e.target.value }))} className="w-full bg-white border border-gray-200 rounded-xl p-3 text-sm outline-none focus:border-brand-500" placeholder="Line" />
-                  <input type="text" value={newUserForm.phone} onChange={e => setNewUserForm(prev => ({ ...prev, phone: e.target.value }))} className="w-full bg-white border border-gray-200 rounded-xl p-3 text-sm outline-none focus:border-brand-500" placeholder="Phone" />
+            <div className="max-w-7xl mx-auto px-4 md:px-8 space-y-5 md:space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-5 md:p-6">
+                  <div className="text-xs font-bold uppercase tracking-[0.22em] text-gray-400">Accounts</div>
+                  <div className="text-3xl font-extrabold text-gray-900 mt-3">{managedUsers.length}</div>
+                  <div className="text-sm text-gray-500 mt-2">จำนวนบัญชีทั้งหมดในระบบ</div>
+                </div>
+                <div className="bg-white rounded-3xl border border-emerald-100 shadow-sm p-5 md:p-6">
+                  <div className="text-xs font-bold uppercase tracking-[0.22em] text-emerald-500">Approved</div>
+                  <div className="text-3xl font-extrabold text-emerald-700 mt-3">{approvedUsersCount}</div>
+                  <div className="text-sm text-emerald-700/70 mt-2">บัญชีที่พร้อมใช้งานแล้ว</div>
+                </div>
+                <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-3xl border border-amber-200 shadow-sm p-5 md:p-6">
+                  <div className="text-xs font-bold uppercase tracking-[0.22em] text-amber-500">Pending</div>
+                  <div className="text-3xl font-extrabold text-amber-700 mt-3">{pendingUsersCount}</div>
+                  <div className="text-sm text-amber-800/70 mt-2">รอการกำหนดสิทธิ์และอนุมัติ</div>
                 </div>
               </div>
 
               {pendingUsersCount > 0 && (
-                <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-3xl p-5 md:p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4 shadow-sm relative overflow-hidden">
+                <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-3xl p-5 md:p-6 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 shadow-sm relative overflow-hidden">
                   <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-bl-full pointer-events-none"></div>
                   <div className="relative z-10">
                     <div className="flex items-center gap-2">
@@ -1820,71 +2491,95 @@
                       </span>
                       <div className="text-sm font-bold text-amber-800">แจ้งเตือนผู้สมัครใหม่</div>
                     </div>
-                    <div className="text-3xl font-extrabold text-amber-700 mt-2">{pendingUsersCount} บัญชี</div>
-                    <div className="text-sm text-amber-700/80 mt-1">รอ Admin ตรวจสอบ กำหนดสิทธิ์ และอนุมัติการใช้งาน</div>
+                    <div className="text-2xl md:text-3xl font-extrabold text-amber-700 mt-2">{pendingUsersCount} บัญชีรออนุมัติ</div>
+                    <div className="text-sm text-amber-700/80 mt-1">กดแก้ไขในรายการด้านล่างเพื่อกำหนดสิทธิ์ อัปเดตข้อมูล และอนุมัติการใช้งาน</div>
                   </div>
-                  <div className="flex flex-wrap gap-3 relative z-10">
-                    <div className="px-4 py-3 rounded-2xl bg-white/80 backdrop-blur-sm border border-amber-200 min-w-[140px]">
-                      <div className="text-xs font-bold uppercase tracking-wide text-gray-500">Users ทั้งหมด</div>
-                      <div className="text-2xl font-extrabold text-gray-900 mt-1">{managedUsers.length}</div>
-                    </div>
-                    <div className="px-4 py-3 rounded-2xl bg-white/80 backdrop-blur-sm border border-amber-200 min-w-[140px]">
-                      <div className="text-xs font-bold uppercase tracking-wide text-gray-500">Approved</div>
-                      <div className="text-2xl font-extrabold text-emerald-700 mt-1">{managedUsers.filter(user => user.approved).length}</div>
-                    </div>
-                  </div>
+                  <button onClick={() => { setNewUserForm(emptyNewUserForm); handleNewUserRoleChange('SAS Staff'); setIsAddUserModalOpen(true); }} className="relative z-10 inline-flex items-center justify-center rounded-2xl bg-white px-5 py-3 text-sm font-bold text-amber-700 border border-amber-200 hover:bg-amber-50 transition-colors">
+                    <Icons.Plus className="w-4 h-4 mr-2" /> เพิ่ม Account ใหม่
+                  </button>
                 </div>
               )}
 
               {isUsersLoading && <div className="p-10 text-center text-gray-400 bg-white rounded-3xl border border-gray-100 shadow-sm">กำลังโหลดข้อมูลผู้ใช้งาน...</div>}
 
-              {!isUsersLoading && (
-                <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
-                  <div className="overflow-x-auto">
-                    <table className="min-w-[1380px] w-full text-sm">
-                      <thead className="bg-gray-50 border-b border-gray-200">
-                        <tr className="text-left text-xs font-bold text-gray-500 uppercase tracking-wide">
-                          <th className="px-4 py-3">User ID</th>
-                          <th className="px-4 py-3">Full Name</th>
-                          <th className="px-4 py-3">Role</th>
-                          <th className="px-4 py-3">Position</th>
-                          <th className="px-4 py-3">Password</th>
-                          <th className="px-4 py-3">Confirm Password</th>
-                          <th className="px-4 py-3">Team</th>
-                          <th className="px-4 py-3">Email</th>
-                          <th className="px-4 py-3">Line</th>
-                          <th className="px-4 py-3">Phone</th>
-                          <th className="px-4 py-3 text-center">Approve</th>
-                          <th className="px-4 py-3 text-right">Action</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {managedUsers.map(user => {
-                          const draft = getDraft(user);
+              {!isUsersLoading && managedUsers.length > 0 && (
+                <div className="space-y-4 md:space-y-5">
+                  {managedUsers.map((user, index) => {
+                    const draft = getDraft(user);
+                    const isExpanded = expandedUserId === user.userId;
+                    return (
+                      <div key={user.userId} className={`rounded-[28px] border shadow-sm overflow-hidden ${draft.approved ? 'bg-white border-gray-100' : 'bg-amber-50/40 border-amber-200'}`}>
+                        <button onClick={() => setExpandedUserId(prev => prev === user.userId ? null : user.userId)} className="w-full text-left px-5 md:px-6 py-4 bg-gradient-to-r from-white via-white to-gray-50/80 hover:from-brand-50/60 hover:to-white transition-colors">
+                          <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
+                            <div className="flex items-start gap-4 min-w-0">
+                              <div className="w-11 h-11 shrink-0 rounded-2xl bg-brand-50 text-brand-700 flex items-center justify-center font-extrabold text-sm border border-brand-100">{index + 1}</div>
+                              <div className="min-w-0">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <div className="text-lg font-bold text-gray-900 break-all">{user.userId}</div>
+                                  <div className={`inline-flex px-2.5 py-1 rounded-full text-[11px] font-bold ${draft.approved ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}`}>{draft.approved ? 'Approved' : 'Pending'}</div>
+                                </div>
+                                <div className="text-sm text-gray-500 mt-1 break-words">{draft.fullName || 'ยังไม่ระบุชื่อผู้ใช้งาน'}</div>
+                              </div>
+                            </div>
+                            <div className="flex items-start gap-3">
+                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 md:gap-3 text-xs flex-1">
+                                <div className="rounded-2xl bg-gray-50 border border-gray-100 px-3 py-2.5">
+                                  <div className="text-gray-400 uppercase tracking-wide font-bold">Role</div>
+                                  <div className="text-gray-800 font-semibold mt-1 break-words">{draft.roleValue || '-'}</div>
+                                </div>
+                                <div className="rounded-2xl bg-gray-50 border border-gray-100 px-3 py-2.5">
+                                  <div className="text-gray-400 uppercase tracking-wide font-bold">Position</div>
+                                  <div className="text-gray-800 font-semibold mt-1 break-words">{draft.position || '-'}</div>
+                                </div>
+                                <div className="rounded-2xl bg-gray-50 border border-gray-100 px-3 py-2.5">
+                                  <div className="text-gray-400 uppercase tracking-wide font-bold">Team</div>
+                                  <div className="text-gray-800 font-semibold mt-1 break-words">{draft.team || '-'}</div>
+                                </div>
+                                <div className="rounded-2xl bg-gray-50 border border-gray-100 px-3 py-2.5">
+                                  <div className="text-gray-400 uppercase tracking-wide font-bold">Status</div>
+                                  <div className={`font-semibold mt-1 ${draft.approved ? 'text-emerald-700' : 'text-amber-700'}`}>{draft.approved ? 'พร้อมใช้งาน' : 'รออนุมัติ'}</div>
+                                </div>
+                              </div>
+                              <div className="shrink-0 self-center rounded-2xl border border-gray-200 bg-white px-3 py-2 text-xs font-bold text-gray-600 min-w-[88px] text-center">
+                                {isExpanded ? 'ซ่อน' : 'แก้ไข'}
+                              </div>
+                            </div>
+                          </div>
+                        </button>
 
-                          return (
-                            <tr key={user.userId} className={`border-b border-gray-100 align-top ${draft.approved ? 'bg-white' : 'bg-amber-50/30'}`}>
-                              <td className="px-4 py-4">
-                                <div className="font-bold text-gray-900">{user.userId}</div>
-                                <div className={`mt-1 inline-flex px-2 py-1 rounded-full text-[11px] font-bold ${draft.approved ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}`}>{draft.approved ? 'Approved' : 'Pending'}</div>
-                              </td>
-                              <td className="px-4 py-4"><input type="text" value={draft.fullName} onChange={e => updateDraft(user.userId, 'fullName', e.target.value)} className="w-44 bg-white border border-gray-200 rounded-xl p-2.5 text-sm outline-none focus:border-brand-500" /></td>
-                              <td className="px-4 py-4"><select value={draft.roleValue} onChange={e => updateDraft(user.userId, 'roleValue', e.target.value)} className="w-36 bg-white border border-gray-200 rounded-xl p-2.5 text-sm outline-none focus:border-brand-500"><option value="" disabled>Role</option>{USER_ROLE_OPTIONS.map(option => <option key={option} value={option}>{option}</option>)}</select></td>
-                              <td className="px-4 py-4"><select value={draft.position} onChange={e => updateDraft(user.userId, 'position', e.target.value)} className="w-32 bg-white border border-gray-200 rounded-xl p-2.5 text-sm outline-none focus:border-brand-500"><option value="" disabled>Position</option>{USER_POSITION_OPTIONS.map(option => <option key={option} value={option}>{option}</option>)}</select></td>
-                              <td className="px-4 py-4"><input type="text" value={draft.password} onChange={e => updateDraft(user.userId, 'password', e.target.value)} className="w-36 bg-white border border-gray-200 rounded-xl p-2.5 text-sm outline-none focus:border-brand-500" /></td>
-                              <td className="px-4 py-4"><input type="text" value={draft.confirmPassword} onChange={e => updateDraft(user.userId, 'confirmPassword', e.target.value)} className="w-36 bg-white border border-gray-200 rounded-xl p-2.5 text-sm outline-none focus:border-brand-500" /></td>
-                              <td className="px-4 py-4"><select value={draft.team} onChange={e => updateDraft(user.userId, 'team', e.target.value)} className="w-44 bg-white border border-gray-200 rounded-xl p-2.5 text-sm outline-none focus:border-brand-500"><option value="">- ไม่ระบุทีมเข้าแก้ไข -</option>{teams.map(team => <option key={team} value={team}>{team}</option>)}</select></td>
-                              <td className="px-4 py-4"><input type="email" value={draft.email} onChange={e => updateDraft(user.userId, 'email', e.target.value)} className="w-44 bg-white border border-gray-200 rounded-xl p-2.5 text-sm outline-none focus:border-brand-500" /></td>
-                              <td className="px-4 py-4"><input type="text" value={draft.line} onChange={e => updateDraft(user.userId, 'line', e.target.value)} className="w-36 bg-white border border-gray-200 rounded-xl p-2.5 text-sm outline-none focus:border-brand-500" /></td>
-                              <td className="px-4 py-4"><input type="text" value={draft.phone} onChange={e => updateDraft(user.userId, 'phone', e.target.value)} className="w-36 bg-white border border-gray-200 rounded-xl p-2.5 text-sm outline-none focus:border-brand-500" /></td>
-                              <td className="px-4 py-4 text-center"><input type="checkbox" checked={!!draft.approved} onChange={e => updateDraft(user.userId, 'approved', e.target.checked)} className="w-5 h-5 text-emerald-600 rounded border-gray-300 focus:ring-emerald-500" /></td>
-                              <td className="px-4 py-4"><div className="flex items-center justify-end gap-2"><button onClick={() => handleSaveManagedUserCard(user)} className="p-2.5 rounded-xl text-sm font-bold text-white bg-brand-600 hover:bg-brand-700 transition-all shadow-sm flex items-center gap-2 whitespace-nowrap"><Icons.CheckCircle className="w-4 h-4" /></button><button onClick={() => handleDeleteManagedUser(user.userId)} className="p-2.5 rounded-xl text-sm font-bold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 transition-all flex items-center gap-2 whitespace-nowrap"><Icons.Trash className="w-4 h-4" /></button></div></td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
+                        {isExpanded && (
+                          <div className="p-5 md:p-6 border-t border-gray-100/80">
+                            {renderAccountFormFields(
+                              { userId: user.userId, ...draft },
+                              updater => {
+                                if (typeof updater === 'function') {
+                                  const currentDraft = { userId: user.userId, ...getDraft(user) };
+                                  const nextDraft = updater(currentDraft);
+                                  Object.keys(nextDraft).forEach(key => {
+                                    if (key !== 'userId') updateDraft(user.userId, key, nextDraft[key]);
+                                  });
+                                  return;
+                                }
+                                Object.keys(updater).forEach(key => {
+                                  if (key !== 'userId') updateDraft(user.userId, key, updater[key]);
+                                });
+                              },
+                              'edit'
+                            )}
+
+                            <div className="mt-5 flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3">
+                              <button onClick={() => handleDeleteManagedUser(user.userId)} className="w-full sm:w-auto inline-flex items-center justify-center rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-600 hover:bg-red-100 transition-colors" title="ลบผู้ใช้งาน">
+                                <Icons.Trash className="w-4 h-4 mr-2" /> ลบ Account
+                              </button>
+                              <button onClick={() => handleSaveManagedUserCard(user)} className="w-full sm:w-auto inline-flex items-center justify-center rounded-2xl bg-brand-600 px-4 py-3 text-sm font-bold text-white hover:bg-brand-700 transition-colors shadow-sm" title="บันทึกข้อมูลและสิทธิ์ผู้ใช้งาน">
+                                <Icons.CheckCircle className="w-4 h-4 mr-2" /> บันทึกข้อมูล
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
 
@@ -1892,6 +2587,47 @@
                 <div className="py-12 text-center text-gray-400 bg-white border border-dashed border-gray-200 rounded-3xl shadow-sm">ยังไม่มีข้อมูลผู้ใช้งานในระบบ</div>
               )}
             </div>
+
+            {isAddUserModalOpen && (
+              <div className="fixed inset-0 z-[70] bg-slate-950/55 backdrop-blur-sm flex items-center justify-center p-4">
+                <div className="w-full max-w-4xl max-h-[92vh] overflow-y-auto rounded-[32px] bg-white shadow-2xl border border-gray-100">
+                  <div className="sticky top-0 z-10 bg-white/95 backdrop-blur border-b border-gray-100 px-5 md:px-7 py-4 md:py-5 rounded-t-[32px]">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <div className="text-xs font-bold uppercase tracking-[0.22em] text-brand-500">Create Account</div>
+                        <div className="text-xl md:text-2xl font-extrabold text-gray-900 mt-2">เพิ่ม Account ใหม่</div>
+                        <div className="text-sm text-gray-500 mt-1">กรอกข้อมูลผู้ใช้งานใหม่ในหน้าต่างนี้ แล้วกดบันทึกเพื่อสร้างบัญชี</div>
+                      </div>
+                      <button onClick={() => setIsAddUserModalOpen(false)} className="w-11 h-11 rounded-2xl bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center transition-colors"><Icons.X className="w-5 h-5" /></button>
+                    </div>
+                  </div>
+
+                  <div className="px-5 md:px-7 py-5 md:py-6 space-y-5">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="rounded-3xl bg-brand-50 border border-brand-100 p-4">
+                        <div className="text-xs font-bold uppercase tracking-[0.18em] text-brand-500">UX Flow</div>
+                        <div className="text-sm font-semibold text-brand-800 mt-2">กดปุ่มเพิ่ม Account แล้วกรอกข้อมูลใน modal เดียว</div>
+                      </div>
+                      <div className="rounded-3xl bg-emerald-50 border border-emerald-100 p-4">
+                        <div className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-500">Responsive</div>
+                        <div className="text-sm font-semibold text-emerald-800 mt-2">รองรับ Desktop, Tablet และ Mobile โดยไม่ต้องเลื่อนซ้าย-ขวา</div>
+                      </div>
+                      <div className="rounded-3xl bg-amber-50 border border-amber-100 p-4">
+                        <div className="text-xs font-bold uppercase tracking-[0.18em] text-amber-500">Approval</div>
+                        <div className="text-sm font-semibold text-amber-800 mt-2">กำหนดสิทธิ์และสถานะอนุมัติก่อนสร้างบัญชีได้ทันที</div>
+                      </div>
+                    </div>
+
+                    {renderAccountFormFields(newUserForm, setNewUserForm, 'create')}
+                  </div>
+
+                  <div className="sticky bottom-0 bg-white/95 backdrop-blur border-t border-gray-100 px-5 md:px-7 py-4 rounded-b-[32px] flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
+                    <button onClick={() => setIsAddUserModalOpen(false)} className="w-full sm:w-auto rounded-2xl border border-gray-200 bg-white px-5 py-3 text-sm font-bold text-gray-700 hover:bg-gray-50 transition-colors">ยกเลิก</button>
+                    <button onClick={handleCreateManagedUser} className="w-full sm:w-auto rounded-2xl bg-brand-600 px-5 py-3 text-sm font-bold text-white hover:bg-brand-700 transition-colors shadow-sm inline-flex items-center justify-center"><Icons.CheckCircle className="w-4 h-4 mr-2" /> บันทึก Account ใหม่</button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         );
       };
@@ -2034,10 +2770,12 @@
                   <div key={job.id} onClick={() => { setActiveJobId(job.id); setView('JOB_DETAIL'); }} className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer flex flex-col justify-between">
                     <div>
                       <div className="flex justify-between items-start mb-3">
-                        <StatusBadge status={job.status} size="lg" />
-                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button onClick={(e) => { e.stopPropagation(); setEditingJob(job); setShowJobForm(true); }} className="text-gray-400 hover:text-brand-600 p-1"><Icons.Settings /></button>
-                          <button onClick={(e) => handleDeleteJob(job.id, e)} className="text-gray-400 hover:text-red-500 p-1"><Icons.Trash /></button>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <StatusBadge status={job.status} size="lg" />
+                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onClick={(e) => { e.stopPropagation(); setEditingJob(job); setShowJobForm(true); }} className="text-gray-400 hover:text-brand-600 p-1"><Icons.Settings /></button>
+                            <button onClick={(e) => handleDeleteJob(job.id, e)} className="text-gray-400 hover:text-red-500 p-1"><Icons.Trash /></button>
+                          </div>
                         </div>
                       </div>
                       <h3 className="text-lg font-bold text-gray-900">{job.site}</h3>
@@ -2064,6 +2802,9 @@
       const JobDetail = () => {
         const sasTasks = activeJob?.tasks?.filter(t => t.scope === 'SAS') || [];
         const voTasks = activeJob?.tasks?.filter(t => t.scope === 'VO') || [];
+        const pendingTaskPlans = (activeJob?.tasks || []).filter(task => (task.status || 'รอดำเนินการ') === 'รอดำเนินการ');
+        const areAllPendingTaskPlansSelected = pendingTaskPlans.length > 0 && selectedTaskPlanIds.length === pendingTaskPlans.length;
+        const handleToggleAllPendingTaskPlans = () => setSelectedTaskPlanIds(areAllPendingTaskPlansSelected ? [] : pendingTaskPlans.map(task => task.id));
 
         const breadcrumbs = [
           { icon: <Icons.Home className="w-4 h-4 mb-0.5" />, label: 'Project', onClick: () => setView('JOB_LIST') },
@@ -2072,6 +2813,7 @@
 
         const TaskCard = ({ task }) => {
           const isClosed = task.status === 'Closed';
+          const isPendingPlan = (task.status || 'รอดำเนินการ') === 'รอดำเนินการ';
           const formattedDate = task.targetFixDate
             ? (new Date(task.targetFixDate).toString() !== 'Invalid Date'
                 ? new Date(task.targetFixDate).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' })
@@ -2083,7 +2825,7 @@
               className={`p-4 sm:p-5 rounded-2xl border shadow-sm transition-all cursor-pointer relative z-10 mb-4 ${
                 isClosed 
                   ? 'bg-gray-50/80 border-gray-200 hover:border-gray-300 opacity-95' 
-                  : 'bg-white border-gray-100 hover:border-brand-300 hover:shadow-md'
+                  : 'bg-white border-gray-100 hover:border-brand-300 hover:bg-brand-50/30 transition-all'
               }`}>
               
               <div className="flex justify-between items-start mb-3">
@@ -2093,6 +2835,11 @@
                     {isClosed && (
                       <button onClick={(e) => { e.stopPropagation(); handleExportDefectReport(task.id, e); }} className="px-3 py-1.5 flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold rounded-lg hover:bg-emerald-100 transition-colors shadow-sm" title="Export PDF">
                         <Icons.Download className="w-4 h-4" /> Export Report
+                      </button>
+                    )}
+                    {isPendingPlan && (
+                      <button onClick={(e) => handleExportSingleTaskPlan(task.id, e)} className="px-3 py-1.5 flex items-center gap-1.5 bg-brand-50 border border-brand-200 text-brand-700 text-xs font-bold rounded-lg hover:bg-brand-100 transition-colors shadow-sm" title="Export Task Plan PDF">
+                        <Icons.Download className="w-4 h-4" /> Export PDF
                       </button>
                     )}
                     {!isClosed && (
@@ -2141,7 +2888,19 @@
               <div className="flex justify-between items-center mb-4">
                 <div>
                   <h3 className="text-lg font-bold text-gray-900">Task List</h3>
+                  <div className="text-sm text-gray-500 mt-1">Export เอกสารแผนงานเฉพาะใบงานย่อยสถานะรอดำเนินการ และเลือกได้ทั้งรายใบหรือทั้งหมด</div>
                 </div>
+                {pendingTaskPlans.length > 0 && (
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <div className="rounded-2xl border border-brand-100 bg-white px-4 py-3 shadow-sm">
+                      <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand-500">Pending Plans</div>
+                      <div className="text-sm font-bold text-gray-900 mt-1">{pendingTaskPlans.length} ใบงานพร้อม Export</div>
+                    </div>
+                    <button onClick={handleExportTaskPlans} className="inline-flex items-center justify-center rounded-2xl bg-brand-600 px-4 py-3 text-sm font-bold text-white shadow-sm hover:bg-brand-700 transition-colors">
+                      <Icons.Download className="w-4 h-4 mr-2" /> เลือกใบงานเพื่อ Export
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 pb-10 mt-2">
@@ -2333,50 +3092,99 @@
 
                 <form onSubmit={handleAuthSubmit} className="space-y-4">
                    {authMode === 'REGISTER' && (
-                     <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                       <div>
-                         <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5 flex items-center gap-2"><Icons.User className="w-4 h-4" /> User ID *</label>
-                         <input type="text" value={authForm.userId} onChange={e => setAuthForm({...authForm, userId: e.target.value})} className="w-full bg-white border border-gray-200 rounded-xl p-3.5 text-sm outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-50 transition-all" placeholder="Enter your User ID" required />
+                     <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300 max-h-[52vh] overflow-y-auto pr-1">
+                       <div className="rounded-2xl border border-brand-100 bg-gradient-to-br from-brand-50 to-white p-4 space-y-4">
+                         <div className="flex items-start gap-3">
+                           <div className="w-10 h-10 rounded-2xl bg-brand-600 text-white flex items-center justify-center shadow-sm shrink-0">
+                             <Icons.User className="w-5 h-5" />
+                           </div>
+                           <div>
+                             <div className="text-sm font-extrabold text-gray-900">Create your account</div>
+                             <div className="text-xs text-gray-500 mt-1">กรอกข้อมูลที่จำเป็นก่อน แล้วเพิ่มข้อมูลติดต่อได้ตามต้องการ</div>
+                           </div>
+                         </div>
+
+                         <div className="grid grid-cols-1 gap-4">
+                           <div>
+                             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5 flex items-center gap-2"><Icons.User className="w-4 h-4" /> User ID *</label>
+                             <div className="relative">
+                               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"><Icons.User className="w-4 h-4" /></span>
+                               <input type="text" value={authForm.userId} onChange={e => setAuthForm({...authForm, userId: e.target.value})} className="w-full bg-white border border-gray-200 rounded-xl pl-11 pr-3 py-3.5 text-sm outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-50 transition-all" placeholder="Enter your User ID" required />
+                             </div>
+                           </div>
+                           <div>
+                             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5 flex items-center gap-2"><Icons.User className="w-4 h-4" /> ชื่อ - นามสกุล *</label>
+                             <div className="relative">
+                               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"><Icons.User className="w-4 h-4" /></span>
+                               <input type="text" value={authForm.fullName} onChange={e => setAuthForm({...authForm, fullName: e.target.value})} className="w-full bg-white border border-gray-200 rounded-xl pl-11 pr-3 py-3.5 text-sm outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-50 transition-all" placeholder="John Doe" required />
+                             </div>
+                           </div>
+                           <div>
+                             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5 flex items-center gap-2"><Icons.Briefcase className="w-4 h-4" /> เลือกบทบาท (Role) *</label>
+                             <div className="relative">
+                               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"><Icons.Briefcase className="w-4 h-4" /></span>
+                               <select value={authForm.roleValue} onChange={e => setAuthForm({...authForm, roleValue: e.target.value})} className="w-full bg-white border border-gray-200 rounded-xl pl-11 pr-3 py-3.5 text-sm outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-50 transition-all appearance-none" required>
+                                 <option value="" disabled>-- กรุณาเลือกบทบาท --</option>
+                                 {USER_ROLE_OPTIONS.map(r => <option key={r} value={r}>{r}</option>)}
+                               </select>
+                             </div>
+                           </div>
+                           <div>
+                             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5 flex items-center gap-2"><Icons.Lock className="w-4 h-4" /> Password *</label>
+                             <div className="relative">
+                               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"><Icons.Lock className="w-4 h-4" /></span>
+                               <input type="password" value={authForm.password} onChange={e => setAuthForm({...authForm, password: e.target.value})} className="w-full bg-white border border-gray-200 rounded-xl pl-11 pr-3 py-3.5 text-sm outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-50 transition-all" placeholder="••••••••" required />
+                             </div>
+                           </div>
+                           <div>
+                             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5 flex items-center gap-2"><Icons.Lock className="w-4 h-4" /> Confirm Password *</label>
+                             <div className="relative">
+                               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"><Icons.Lock className="w-4 h-4" /></span>
+                               <input type="password" value={authForm.confirmPassword} onChange={e => setAuthForm({...authForm, confirmPassword: e.target.value})} className="w-full bg-white border border-gray-200 rounded-xl pl-11 pr-3 py-3.5 text-sm outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-50 transition-all" placeholder="••••••••" required />
+                             </div>
+                           </div>
+                         </div>
                        </div>
-                       <div>
-                         <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5 flex items-center gap-2"><Icons.User className="w-4 h-4" /> ชื่อ - นามสกุล *</label>
-                         <input type="text" value={authForm.fullName} onChange={e => setAuthForm({...authForm, fullName: e.target.value})} className="w-full bg-white border border-gray-200 rounded-xl p-3.5 text-sm outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-50 transition-all" placeholder="John Doe" required />
-                       </div>
-                       <div>
-                         <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5 flex items-center gap-2"><Icons.Briefcase className="w-4 h-4" /> เลือกบทบาท (Role) *</label>
-                         <select value={authForm.roleValue} onChange={e => setAuthForm({...authForm, roleValue: e.target.value})} className="w-full bg-white border border-gray-200 rounded-xl p-3.5 text-sm outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-50 transition-all" required>
-                            <option value="" disabled>-- กรุณาเลือกบทบาท --</option>
-                            {USER_ROLE_OPTIONS.map(r => <option key={r} value={r}>{r}</option>)}
-                         </select>
-                       </div>
-                       <div>
-                         <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5 flex items-center gap-2"><Icons.Lock className="w-4 h-4" /> Password *</label>
-                         <input type="password" value={authForm.password} onChange={e => setAuthForm({...authForm, password: e.target.value})} className="w-full bg-white border border-gray-200 rounded-xl p-3.5 text-sm outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-50 transition-all" placeholder="••••••••" required />
-                       </div>
-                       <div>
-                         <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5 flex items-center gap-2"><Icons.Lock className="w-4 h-4" /> Confirm Password *</label>
-                         <input type="password" value={authForm.confirmPassword} onChange={e => setAuthForm({...authForm, confirmPassword: e.target.value})} className="w-full bg-white border border-gray-200 rounded-xl p-3.5 text-sm outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-50 transition-all" placeholder="••••••••" required />
-                       </div>
-                       <div>
-                         <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5 flex items-center gap-2"><Icons.Mail className="w-4 h-4" /> Email</label>
-                         <input type="email" value={authForm.email} onChange={e => setAuthForm({...authForm, email: e.target.value})} className="w-full bg-white border border-gray-200 rounded-xl p-3.5 text-sm outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-50 transition-all" placeholder="you@example.com" />
-                       </div>
-                       <div>
-                         <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5 flex items-center gap-2"><Icons.User className="w-4 h-4" /> Line</label>
-                         <input type="text" value={authForm.line} onChange={e => setAuthForm({...authForm, line: e.target.value})} className="w-full bg-white border border-gray-200 rounded-xl p-3.5 text-sm outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-50 transition-all" placeholder="Line ID" />
-                       </div>
-                       <div>
-                         <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5 flex items-center gap-2"><Icons.Phone className="w-4 h-4" /> Phone</label>
-                         <input type="text" value={authForm.phone} onChange={e => setAuthForm({...authForm, phone: e.target.value})} className="w-full bg-white border border-gray-200 rounded-xl p-3.5 text-sm outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-50 transition-all" placeholder="08x-xxx-xxxx" />
+
+                       <div className="rounded-2xl border border-gray-200 bg-white p-4 space-y-4">
+                         <div>
+                           <div className="text-sm font-bold text-gray-900">ข้อมูลติดต่อเพิ่มเติม</div>
+                           <div className="text-xs text-gray-500 mt-1">Email, Line และ Phone เป็นฟิลด์เสริม ไม่บังคับกรอก</div>
+                         </div>
+                         <div className="grid grid-cols-1 gap-4">
+                           <div>
+                             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5 flex items-center gap-2"><Icons.Mail className="w-4 h-4" /> Email</label>
+                             <div className="relative">
+                               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"><Icons.Mail className="w-4 h-4" /></span>
+                               <input type="email" value={authForm.email} onChange={e => setAuthForm({...authForm, email: e.target.value})} className="w-full bg-white border border-gray-200 rounded-xl pl-11 pr-3 py-3.5 text-sm outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-50 transition-all" placeholder="you@example.com" />
+                             </div>
+                           </div>
+                           <div>
+                             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5 flex items-center gap-2"><Icons.User className="w-4 h-4" /> Line</label>
+                             <div className="relative">
+                               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"><Icons.User className="w-4 h-4" /></span>
+                               <input type="text" value={authForm.line} onChange={e => setAuthForm({...authForm, line: e.target.value})} className="w-full bg-white border border-gray-200 rounded-xl pl-11 pr-3 py-3.5 text-sm outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-50 transition-all" placeholder="Line ID" />
+                             </div>
+                           </div>
+                           <div>
+                             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5 flex items-center gap-2"><Icons.Phone className="w-4 h-4" /> Phone</label>
+                             <div className="relative">
+                               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"><Icons.Phone className="w-4 h-4" /></span>
+                               <input type="text" value={authForm.phone} onChange={e => setAuthForm({...authForm, phone: e.target.value})} className="w-full bg-white border border-gray-200 rounded-xl pl-11 pr-3 py-3.5 text-sm outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-50 transition-all" placeholder="08x-xxx-xxxx" />
+                             </div>
+                           </div>
+                         </div>
                        </div>
                      </div>
                    )}
-
                    {authMode === 'LOGIN' && (
                      <React.Fragment>
                        <div>
                          <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5 flex items-center gap-2"><Icons.User className="w-4 h-4" /> User ID *</label>
-                         <input type="text" value={authForm.userId} onChange={e => setAuthForm({...authForm, userId: e.target.value})} className="w-full bg-white border border-gray-200 rounded-xl p-3.5 text-sm outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-50 transition-all" placeholder="Enter your User ID" required />
+                         <div className="relative">
+                           <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"><Icons.User className="w-4 h-4" /></span>
+                           <input type="text" value={authForm.userId} onChange={e => setAuthForm({...authForm, userId: e.target.value})} className="w-full bg-white border border-gray-200 rounded-xl pl-11 pr-3 py-3.5 text-sm outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-50 transition-all" placeholder="Enter your User ID" required />
+                         </div>
                        </div>
                        <div>
                          <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5 flex items-center gap-2"><Icons.Lock className="w-4 h-4" /> Password *</label>
@@ -2432,6 +3240,101 @@
            {showJobForm && <JobModal />}
            {showTaskForm && <TaskModal />}
            {showDefectForm && <DefectModal />}
+           {isTaskPlanSelectorOpen && (
+             <div className="fixed inset-0 z-[75] bg-slate-950/50 backdrop-blur-sm flex items-center justify-center p-4">
+               <div className="w-full max-w-2xl rounded-[28px] bg-white border border-gray-100 shadow-2xl overflow-hidden">
+                 <div className="px-5 md:px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-brand-50 to-white">
+                   <div className="flex items-start justify-between gap-4">
+                     <div>
+                       <div className="text-xs font-bold uppercase tracking-[0.18em] text-brand-500">Select Pending Plans</div>
+                       <div className="text-xl font-extrabold text-gray-900 mt-1">เลือกใบงานย่อยที่ต้องการ Export</div>
+                       <div className="text-sm text-gray-500 mt-1">ระบบจะแสดงเฉพาะใบงานย่อยสถานะรอดำเนินการเท่านั้น</div>
+                      </div>
+                      <button onClick={() => setIsTaskPlanSelectorOpen(false)} className="w-10 h-10 rounded-2xl bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center transition-colors"><Icons.X /></button>
+                    </div>
+                  </div>
+                  <div className="p-5 md:p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-2xl border border-gray-100 bg-gray-50/80 px-4 py-4">
+                      <div>
+                        <div className="text-sm font-bold text-gray-900">รายการใบงานย่อยพร้อม Export</div>
+                        <div className="text-xs text-gray-500 mt-1">เลือกได้เฉพาะรายการที่มีสถานะรอดำเนินการ</div>
+                      </div>
+                      <button onClick={handleToggleAllPendingTaskPlanCandidates} className="inline-flex items-center justify-center rounded-2xl border border-brand-200 bg-white px-4 py-2.5 text-sm font-bold text-brand-700 hover:bg-brand-50 transition-colors">
+                        {areAllPendingTaskPlanCandidatesSelected ? 'ล้างการเลือกทั้งหมด' : 'เลือกทั้งหมด'}
+                      </button>
+                    </div>
+                    <div className="space-y-3">
+                      {pendingTaskPlanCandidates.map(task => {
+                        const isChecked = selectedTaskPlanIds.includes(task.id);
+                        const formattedDate = task.targetFixDate
+                          ? (new Date(task.targetFixDate).toString() !== 'Invalid Date'
+                              ? new Date(task.targetFixDate).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' })
+                              : task.targetFixDate)
+                          : 'N/A';
+
+                        return (
+                          <label key={task.id} className={`flex items-start gap-4 rounded-2xl border px-4 py-4 cursor-pointer transition-colors ${isChecked ? 'border-brand-300 bg-brand-50/60' : 'border-gray-100 bg-white hover:border-brand-200 hover:bg-brand-50/30'}`}>
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={() => setSelectedTaskPlanIds(prev => prev.includes(task.id) ? prev.filter(id => id !== task.id) : [...prev, task.id])}
+                              className="mt-1 h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                            />
+                            <div className="min-w-0 flex-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <StatusBadge status={task.status} size="sm" />
+                                <span className="text-sm font-bold text-gray-900 truncate">{task.customerName || '- ไม่ระบุชื่อลูกค้า -'}</span>
+                                <span className="text-xs font-medium px-2 py-0.5 rounded-md whitespace-nowrap bg-white text-gray-400 border border-gray-100">ID: {task.id}</span>
+                              </div>
+                              <div className="text-sm text-gray-600 mt-2">อาคาร {task.building} - Unit {task.unit}</div>
+                              <div className="text-xs text-gray-500 mt-1">Defects: {task.defects?.length || 0} | Target Date: {formattedDate}</div>
+                            </div>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div className="px-5 md:px-6 py-4 border-t border-gray-100 bg-white flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
+                    <button onClick={() => setIsTaskPlanSelectorOpen(false)} className="rounded-2xl border border-gray-200 bg-white px-5 py-3 text-sm font-bold text-gray-700 hover:bg-gray-50 transition-colors">ยกเลิก</button>
+                    <button onClick={handleConfirmExportTaskPlans} className="rounded-2xl bg-brand-600 px-5 py-3 text-sm font-bold text-white hover:bg-brand-700 transition-colors inline-flex items-center justify-center">
+                      <Icons.Download className="w-4 h-4 mr-2" /> Export ใบงานที่เลือก ({selectedTaskPlanIds.length})
+                    </button>
+                  </div>
+               </div>
+             </div>
+           )}
+           {pdfLinks.length > 0 && (
+             <div className="fixed inset-0 z-[80] bg-slate-950/50 backdrop-blur-sm flex items-center justify-center p-4">
+               <div className="w-full max-w-2xl rounded-[28px] bg-white border border-gray-100 shadow-2xl overflow-hidden">
+                 <div className="px-5 md:px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-brand-50 to-white">
+                   <div className="flex items-start justify-between gap-4">
+                     <div>
+                       <div className="text-xs font-bold uppercase tracking-[0.18em] text-brand-500">PDF Export</div>
+                       <div className="text-xl font-extrabold text-gray-900 mt-1">สร้างเอกสารแผนงานสำเร็จ</div>
+                       <div className="text-sm text-gray-500 mt-1">เลือกเปิดไฟล์ PDF ที่สร้างเสร็จแล้วได้จากรายการด้านล่าง</div>
+                     </div>
+                     <button onClick={() => setPdfLinks([])} className="w-10 h-10 rounded-2xl bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center transition-colors"><Icons.X /></button>
+                   </div>
+                 </div>
+                 <div className="p-5 md:p-6 space-y-3 max-h-[70vh] overflow-y-auto">
+                   {pdfLinks.map((file, index) => (
+                     <a key={`${file.taskId || 'pdf'}-${index}`} href={file.url} target="_blank" rel="noreferrer" className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-2xl border border-gray-100 bg-gray-50/80 px-4 py-4 hover:border-brand-200 hover:bg-brand-50 transition-colors">
+                       <div className="min-w-0">
+                         <div className="text-sm font-bold text-gray-900 break-all">{file.name || `RepairPlan_${file.taskId || index}.pdf`}</div>
+                         <div className="text-xs text-gray-500 mt-1">Task ID: {file.taskId || '-'}</div>
+                       </div>
+                       <div className="inline-flex items-center text-sm font-bold text-brand-700 shrink-0">
+                         เปิดไฟล์ <Icons.ChevronRight className="w-4 h-4 ml-1" />
+                       </div>
+                     </a>
+                   ))}
+                 </div>
+                 <div className="px-5 md:px-6 py-4 border-t border-gray-100 bg-white flex justify-end">
+                   <button onClick={() => setPdfLinks([])} className="rounded-2xl border border-gray-200 bg-white px-5 py-3 text-sm font-bold text-gray-700 hover:bg-gray-50 transition-colors">ปิด</button>
+                 </div>
+               </div>
+             </div>
+           )}
            
            {isSaving && <FullScreenLoader message="กำลังบันทึกข้อมูล..." />}
            {isRefreshing && <FullScreenLoader message="กำลังรีเฟรชข้อมูล..." />}
