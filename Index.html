@@ -1016,7 +1016,7 @@
     };
 
     // --- Component จัดการอัปโหลดรูป ---
-    const DefectImagesUploader = ({ defect, taskStatus, onSuccess }) => {
+    const DefectImagesUploader = ({ defect, taskStatus, onSuccess, isSupplier = false }) => {
       const [images, setImages] = useState({
         imgUnit: defect?.imgUnit || '',
         imgBefore: defect?.imgBefore || '',
@@ -1106,7 +1106,11 @@
         if (file) {
           const reader = new FileReader();
           reader.onloadend = () => {
-            setEditingImage({ field: field, src: reader.result });
+            if (isSupplier) {
+              setImages(prev => ({ ...prev, [field]: reader.result }));
+            } else {
+              setEditingImage({ field: field, src: reader.result });
+            }
           };
           reader.readAsDataURL(file);
         }
@@ -1155,7 +1159,7 @@
       };
 
       const ImagePreviewModal = () => {
-        const canEditPreview = previewImage && !isTaskRejected && !isTaskClosed && !isDefectFixed && images[previewImage.field] && !String(images[previewImage.field]).startsWith('http');
+        const canEditPreview = !isSupplier && previewImage && !isTaskRejected && !isTaskClosed && !isDefectFixed && images[previewImage.field] && !String(images[previewImage.field]).startsWith('http');
         const modalPreviewSource = previewImage?.field ? (previewDataUrls[previewImage.field] || previewImage?.src || '') : (previewImage?.src || '');
         const previewCandidates = getImageUrlCandidates(modalPreviewSource);
         const [previewCandidateIndex, setPreviewCandidateIndex] = useState(0);
@@ -1202,7 +1206,7 @@
         const isBase64 = currentImg && currentImg.startsWith('data:image');
         const isUploaded = currentImg && currentImg.startsWith('http');
         const isUploading = uploadingField === field;
-        const canEditImage = !isDisabled && !isTaskRejected && !isTaskClosed && !isDefectFixed && !isUploaded;
+        const canEditImage = !isSupplier && !isDisabled && !isTaskRejected && !isTaskClosed && !isDefectFixed && !isUploaded;
         const resolvedPreviewSource = previewDataUrls[field] || currentImg;
         const previewCandidates = getImageUrlCandidates(resolvedPreviewSource);
         const [previewCandidateIndex, setPreviewCandidateIndex] = useState(0);
@@ -1306,7 +1310,7 @@
 
       return (
         <div className="w-full">
-          {editingImage && <ImageAnnotator imageSrc={editingImage.src} field={editingImage.field} onSave={handleAnnotatorSave} onClose={() => setEditingImage(null)} />}
+          {editingImage && !isSupplier && <ImageAnnotator imageSrc={editingImage.src} field={editingImage.field} onSave={handleAnnotatorSave} onClose={() => setEditingImage(null)} />}
           {previewImage && <ImagePreviewModal />}
           {uploadingField && <FullScreenLoader message="กำลังอัปโหลดรูปภาพ..." />}
           {isSavingStatus && <FullScreenLoader message="กำลังอัปเดตสถานะ..." />}
@@ -1314,7 +1318,7 @@
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
             <div>
               <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">จัดการรูปภาพ</h3>
-              <p className="text-sm text-gray-500 mt-1">แตะรูปเพื่อดูเต็มจอ และแก้ไข/annotate พร้อมเวลาและตำแหน่งได้ทั้งบน mobile, tablet และ desktop</p>
+              <p className="text-sm text-gray-500 mt-1">{isSupplier ? 'สำหรับ Supplier สามารถเพิ่มและบันทึกรูปภาพได้เท่านั้น' : 'แตะรูปเพื่อดูเต็มจอ และแก้ไข/annotate พร้อมเวลาและตำแหน่งได้ทั้งบน mobile, tablet และ desktop'}</p>
             </div>
             <div className="text-right w-full md:w-auto">
               {!isTaskActive && !isTaskRejected && !isTaskClosed && <span className="inline-block px-3 py-1.5 bg-gradient-to-br from-amber-50 to-yellow-100 text-amber-700 text-sm font-bold rounded-md border border-amber-200 shadow-sm w-full md:w-auto text-center">⚠️ ต้องเปิดใบงาน (Active) ก่อน</span>}
@@ -1331,18 +1335,22 @@
           </div>
           
           <div className="mt-8 flex justify-end border-t border-gray-200 pt-6">
-            <button 
-              onClick={handleFinishDefect} 
-              disabled={!allImagesUploadedAndSaved || isSavingStatus || isDefectFixed || isTaskClosed} 
-              className={`px-8 py-3.5 text-white rounded-xl flex items-center font-bold text-sm transition-all w-full md:w-auto justify-center ${
-                isDefectFixed || isTaskClosed ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
-                : !allImagesUploadedAndSaved ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
-                : 'bg-gradient-to-r from-brand-500 to-emerald-500 hover:from-brand-600 hover:to-emerald-600 shadow-md shadow-emerald-200 hover:-translate-y-0.5'
-              }`}
-            >
-              {isDefectFixed ? <React.Fragment><span className="mr-2"><Icons.CheckCircle className="w-5 h-5" /></span> แก้ไขเสร็จสิ้นแล้ว</React.Fragment> : 
-               <React.Fragment><span className="mr-2"><Icons.CheckCircle className="w-5 h-5" /></span> ยืนยันแก้ไขเสร็จสิ้น</React.Fragment>}
-            </button>
+            {isSupplier ? (
+              <div className="w-full rounded-2xl border border-cyan-100 bg-cyan-50 px-4 py-3 text-sm font-semibold text-cyan-800 text-center md:text-left">Supplier ทำได้เฉพาะการเพิ่มและบันทึกรูปภาพ การปิด defect จะดำเนินการโดย Staff หรือ Admin</div>
+            ) : (
+              <button 
+                onClick={handleFinishDefect} 
+                disabled={!allImagesUploadedAndSaved || isSavingStatus || isDefectFixed || isTaskClosed} 
+                className={`px-8 py-3.5 text-white rounded-xl flex items-center font-bold text-sm transition-all w-full md:w-auto justify-center ${
+                  isDefectFixed || isTaskClosed ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
+                  : !allImagesUploadedAndSaved ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
+                  : 'bg-gradient-to-r from-brand-500 to-emerald-500 hover:from-brand-600 hover:to-emerald-600 shadow-md shadow-emerald-200 hover:-translate-y-0.5'
+                }`}
+              >
+                {isDefectFixed ? <React.Fragment><span className="mr-2"><Icons.CheckCircle className="w-5 h-5" /></span> แก้ไขเสร็จสิ้นแล้ว</React.Fragment> : 
+                 <React.Fragment><span className="mr-2"><Icons.CheckCircle className="w-5 h-5" /></span> ยืนยันแก้ไขเสร็จสิ้น</React.Fragment>}
+              </button>
+            )}
           </div>
         </div>
       );
@@ -1377,6 +1385,7 @@
       const [pdfLinks, setPdfLinks] = useState([]);
       const [isTaskPlanSelectorOpen, setIsTaskPlanSelectorOpen] = useState(false);
       const [selectedTaskPlanIds, setSelectedTaskPlanIds] = useState([]);
+      const [taskListStatusFilter, setTaskListStatusFilter] = useState('รอดำเนินการ');
 
       const [activeJobId, setActiveJobId] = useState(null);
       const [activeTaskId, setActiveTaskId] = useState(null);
@@ -1410,6 +1419,7 @@
       const isSupplier = currentUser?.isSupplier === true || currentPosition === 'supplier' || currentUser?.role === 'SUPPLIER';
       const canManageProjects = isAdmin || isStaff;
       const canManageUsers = isAdmin;
+      const canAccessSettings = isAdmin || isStaff;
 
       const fetchData = (softRefresh = false) => {
         if (softRefresh) {
@@ -1491,11 +1501,14 @@
 
       useEffect(() => {
         if (!currentUser) return;
-        if (isSupplier && !isAdmin && !isStaff && !['SUPPLIER_DEFECTS', 'DEFECT_DETAIL', 'PROFILE_SETTINGS'].includes(view)) {
+        if (isSupplier && !isAdmin && !isStaff && !['SUPPLIER_DEFECTS', 'DEFECT_DETAIL'].includes(view)) {
           setView('SUPPLIER_DEFECTS');
         }
         if (!isSupplier && view === 'SUPPLIER_DEFECTS') {
           setView('DASHBOARD');
+        }
+        if (!canAccessSettings && view === 'SETTINGS') {
+          setView(isSupplier ? 'SUPPLIER_DEFECTS' : 'DASHBOARD');
         }
       }, [currentUser, view]);
 
@@ -2139,8 +2152,8 @@
                   ...(!isSupplier || isAdmin || isStaff ? [{ icon: Icons.Grid, label: 'Dashboard', targetView: 'DASHBOARD', active: view === 'DASHBOARD' }] : []),
                   ...((isSupplier && !isAdmin && !isStaff) ? [{ icon: Icons.Calendar, label: 'My Defects', targetView: 'SUPPLIER_DEFECTS', active: view === 'SUPPLIER_DEFECTS' || view === 'DEFECT_DETAIL' }] : [{ icon: Icons.Building, label: 'Project', targetView: 'JOB_LIST', active: view === 'JOB_LIST' }]),
                   ...(!isSupplier || isAdmin || isStaff ? [{ icon: Icons.Calendar, label: 'Tasks & Defects', targetView: null, active: view === 'JOB_DETAIL' || view === 'TASK_DETAIL' || view === 'DEFECT_DETAIL' }] : []),
+                  ...(canAccessSettings ? [{ icon: Icons.Settings, label: 'Settings', targetView: 'SETTINGS', active: view === 'SETTINGS' }] : []),
                   ...(canManageUsers ? [{ icon: Icons.User, label: 'User Management', targetView: 'USER_MANAGEMENT', active: view === 'USER_MANAGEMENT' }] : []),
-                  ...(!isAdmin ? [{ icon: Icons.Settings, label: 'My Profile', targetView: 'PROFILE_SETTINGS', active: view === 'PROFILE_SETTINGS' }] : []),
                 ].map((item, idx) => {
                   const IconComp = item.icon;
                   return (
@@ -2202,6 +2215,11 @@
       );
 
       const DashboardView = () => {
+        const [calendarMonth, setCalendarMonth] = useState(() => {
+          const now = new Date();
+          return new Date(now.getFullYear(), now.getMonth(), 1);
+        });
+
         const summaryCards = [
           { label: 'Projects ทั้งหมด', value: jobs.length, accent: 'from-sky-500 to-cyan-500', helper: `${activeProjectsCount} Active / ${closedProjectsCount} Closed` },
           { label: 'Tasks ทั้งหมด', value: allTasks.length, accent: 'from-violet-500 to-purple-500', helper: `${pendingTasksCount} Pending / ${activeTasksCount} Active` },
@@ -2209,23 +2227,121 @@
           { label: 'Major Issues', value: majorDefectsCount, accent: 'from-rose-500 to-red-500', helper: 'รายการที่ต้องติดตามใกล้ชิด' }
         ];
 
+        const parseScheduleDate = (value) => {
+          if (!value) return null;
+          const parsed = new Date(value);
+          return Number.isNaN(parsed.getTime()) ? null : parsed;
+        };
+
+        const formatDashboardDate = (value, options = { day: 'numeric', month: 'short', year: 'numeric' }) => {
+          const parsed = value instanceof Date ? value : parseScheduleDate(value);
+          if (!parsed) return '-';
+          return parsed.toLocaleDateString('th-TH', options);
+        };
+
+        const planningEvents = jobs.flatMap(job =>
+          (job.tasks || []).flatMap(task =>
+            (task.defects || []).flatMap(defect => {
+              const visitDate = parseScheduleDate(defect.targetStartDate);
+              const completionDate = parseScheduleDate(defect.targetEndDate);
+              const basePayload = {
+                defectId: defect.id,
+                description: defect.description,
+                status: defect.status,
+                major: defect.major,
+                team: defect.team || '-',
+                taskId: task.id,
+                taskScope: task.scope,
+                building: task.building,
+                unit: task.unit,
+                customerName: task.customerName || '-',
+                jobId: job.id,
+                site: job.site,
+                ownerCompany: job.ownerCompany || '-',
+                rawVisitDate: defect.targetStartDate,
+                rawCompletionDate: defect.targetEndDate
+              };
+
+              return [
+                visitDate ? { ...basePayload, type: 'visit', title: 'เข้าแก้ไข', date: visitDate } : null,
+                completionDate ? { ...basePayload, type: 'complete', title: 'แก้ไขเสร็จ', date: completionDate } : null
+              ].filter(Boolean);
+            })
+          )
+        );
+
+        const monthStart = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), 1);
+        const monthEnd = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 0);
+        const calendarStart = new Date(monthStart);
+        calendarStart.setDate(monthStart.getDate() - monthStart.getDay());
+        const calendarEnd = new Date(monthEnd);
+        calendarEnd.setDate(monthEnd.getDate() + (6 - monthEnd.getDay()));
+
+        const calendarDays = [];
+        for (let day = new Date(calendarStart); day <= calendarEnd; day.setDate(day.getDate() + 1)) {
+          calendarDays.push(new Date(day));
+        }
+
+        const getDateKey = (date) => {
+          const year = date.getFullYear();
+          const month = `${date.getMonth() + 1}`.padStart(2, '0');
+          const day = `${date.getDate()}`.padStart(2, '0');
+          return `${year}-${month}-${day}`;
+        };
+
+        const eventsByDate = planningEvents.reduce((acc, event) => {
+          const key = getDateKey(event.date);
+          if (!acc[key]) acc[key] = [];
+          acc[key].push(event);
+          return acc;
+        }, {});
+
+        const today = new Date();
+        const todayKey = getDateKey(today);
+        const todayEvents = (eventsByDate[todayKey] || []).sort((a, b) => a.date - b.date);
+        const monthEvents = planningEvents.filter(event => event.date >= monthStart && event.date <= monthEnd);
+        const scheduledVisitsCount = monthEvents.filter(event => event.type === 'visit').length;
+        const scheduledCompletionsCount = monthEvents.filter(event => event.type === 'complete').length;
+        const monthMajorEventsCount = monthEvents.filter(event => event.major === 'ใช่').length;
+        const overloadedDates = Object.entries(eventsByDate)
+          .map(([dateKey, events]) => ({ dateKey, total: events.length, visit: events.filter(event => event.type === 'visit').length, complete: events.filter(event => event.type === 'complete').length }))
+          .filter(item => item.dateKey.startsWith(`${monthStart.getFullYear()}-${`${monthStart.getMonth() + 1}`.padStart(2, '0')}`))
+          .sort((a, b) => b.total - a.total)
+          .slice(0, 4);
+        const teamWorkload = monthEvents.reduce((acc, event) => {
+          const team = event.team || '-';
+          acc[team] = (acc[team] || 0) + 1;
+          return acc;
+        }, {});
+        const topTeams = Object.entries(teamWorkload)
+          .map(([team, total]) => ({ team, total }))
+          .sort((a, b) => b.total - a.total)
+          .slice(0, 5);
+        const upcomingAgenda = planningEvents
+          .filter(event => event.date >= new Date(today.getFullYear(), today.getMonth(), today.getDate()))
+          .sort((a, b) => a.date - b.date)
+          .slice(0, 8);
+        const planHealth = allDefects.length > 0 ? Math.round(((scheduledVisitsCount + scheduledCompletionsCount) / Math.max(allDefects.length, 1)) * 100) : 0;
+        const monthLabel = calendarMonth.toLocaleDateString('th-TH', { month: 'long', year: 'numeric' });
+        const weekDayLabels = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'];
+
         return (
           <div className="pb-8 w-full">
             <PageHeader 
               title="Defect Operations Dashboard"
-              subtitle="OVERVIEW"
-              badges={['Live Data']}
+              subtitle="MANAGER PLANNING VIEW"
+              badges={['Calendar View', 'Live Data']}
               info={[
                 { value: `${completionRate}%`, label: 'Completion Rate' },
-                { value: pendingProjectsCount, label: 'Pending Projects' }
+                { value: scheduledVisitsCount + scheduledCompletionsCount, label: 'Monthly Planned Events' }
               ]}
               action={
-                <button onClick={() => setView('JOB_LIST')} className="bg-brand-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-brand-700 shadow-sm flex items-center transition-all hover:-translate-y-0.5">
+                <button onClick={() => setView('JOB_LIST')} className="bg-brand-600 text-white px-4 py-2.5 rounded-xl text-sm font-bold hover:bg-brand-700 shadow-sm flex items-center transition-all hover:-translate-y-0.5">
                   <Icons.Building className="w-4 h-4 mr-1 shrink-0" /> <span>Open Projects</span>
                 </button>
               }
             />
-            <div className="max-w-7xl mx-auto px-6 md:px-8 space-y-6">
+            <div className="max-w-7xl mx-auto px-4 md:px-8 space-y-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
                 {summaryCards.map(card => (
                   <div key={card.label} className="bg-white rounded-3xl border border-gray-100 shadow-sm p-5">
@@ -2237,6 +2353,231 @@
                     <div className="text-xs text-gray-500 mt-2">{card.helper}</div>
                   </div>
                 ))}
+              </div>
+
+              <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.8fr)_minmax(320px,0.95fr)] gap-6">
+                <div className="bg-white rounded-[30px] border border-gray-100 shadow-sm p-4 sm:p-5 md:p-6">
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between mb-5">
+                    <div>
+                      <div className="inline-flex items-center rounded-full bg-brand-50 px-3 py-1 text-xs font-bold text-brand-700">Manager Calendar View</div>
+                      <h3 className="text-xl md:text-2xl font-extrabold text-gray-900 mt-3">แผนเข้าแก้ไขและแผนปิดงานในเดือนเดียวกัน</h3>
+                      <p className="text-sm text-gray-500 mt-2">จุดสีฟ้า = วันเข้าแก้ไข และจุดสีเขียว = วันแก้ไขเสร็จสิ้น เพื่อให้ผู้จัดการ monitor แผนงานและการกระจายภาระงานได้ในหน้าเดียว</p>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full lg:w-auto lg:min-w-[420px]">
+                      <div className="rounded-2xl border border-cyan-100 bg-cyan-50 px-4 py-3">
+                        <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-cyan-700">Visit Plan</div>
+                        <div className="text-2xl font-extrabold text-cyan-900 mt-2">{scheduledVisitsCount}</div>
+                        <div className="text-xs text-cyan-700 mt-1">รายการเข้าแก้ไขในเดือนนี้</div>
+                      </div>
+                      <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3">
+                        <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-emerald-700">Completion Plan</div>
+                        <div className="text-2xl font-extrabold text-emerald-900 mt-2">{scheduledCompletionsCount}</div>
+                        <div className="text-xs text-emerald-700 mt-1">รายการปิดงานในเดือนนี้</div>
+                      </div>
+                      <div className="rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3">
+                        <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-amber-700">Major Focus</div>
+                        <div className="text-2xl font-extrabold text-amber-900 mt-2">{monthMajorEventsCount}</div>
+                        <div className="text-xs text-amber-700 mt-1">เหตุการณ์ที่มี major ต้องติดตาม</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="rounded-[28px] border border-slate-200 bg-gradient-to-br from-slate-50 via-white to-brand-50/40 p-4 md:p-5">
+                    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-4">
+                      <div>
+                        <div className="text-lg font-extrabold text-slate-900">{monthLabel}</div>
+                        <div className="text-sm text-slate-500 mt-1">มุมมองปฏิทินสำหรับ monitor แผนเข้าแก้ไขและแผนเสร็จงานของทีม</div>
+                      </div>
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <button onClick={() => setCalendarMonth(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))} className="w-11 h-11 rounded-2xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition-colors flex items-center justify-center"><Icons.ChevronLeft className="w-4 h-4" /></button>
+                        <button onClick={() => setCalendarMonth(new Date(today.getFullYear(), today.getMonth(), 1))} className="px-4 py-2.5 rounded-2xl bg-brand-600 text-white text-sm font-bold shadow-sm hover:bg-brand-700 transition-colors whitespace-nowrap">เดือนปัจจุบัน</button>
+                        <button onClick={() => setCalendarMonth(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))} className="w-11 h-11 rounded-2xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition-colors flex items-center justify-center"><Icons.ChevronRight className="w-4 h-4" /></button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-7 gap-2 mb-2">
+                      {weekDayLabels.map(label => (
+                        <div key={label} className="text-center text-[11px] sm:text-xs font-bold uppercase tracking-[0.18em] text-slate-400 py-2">{label}</div>
+                      ))}
+                    </div>
+
+                    <div className="grid grid-cols-7 gap-2">
+                      {calendarDays.map(day => {
+                        const key = getDateKey(day);
+                        const dayEvents = eventsByDate[key] || [];
+                        const visitCount = dayEvents.filter(event => event.type === 'visit').length;
+                        const completeCount = dayEvents.filter(event => event.type === 'complete').length;
+                        const isCurrentMonth = day.getMonth() === calendarMonth.getMonth();
+                        const isToday = key === todayKey;
+
+                        return (
+                          <div key={key} className={`min-h-[92px] sm:min-h-[108px] rounded-2xl border p-2.5 sm:p-3 transition-all ${isCurrentMonth ? 'bg-white border-slate-200 shadow-sm' : 'bg-slate-50/70 border-slate-100'} ${isToday ? 'ring-2 ring-brand-300 border-brand-200' : ''}`}>
+                            <div className="flex items-start justify-between gap-2">
+                              <span className={`text-sm font-extrabold ${isCurrentMonth ? 'text-slate-900' : 'text-slate-400'}`}>{day.getDate()}</span>
+                              {dayEvents.length > 0 && <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600">{dayEvents.length}</span>}
+                            </div>
+                            <div className="mt-2 space-y-1.5">
+                              {visitCount > 0 && <div className="rounded-xl bg-cyan-50 border border-cyan-100 px-2 py-1 text-[10px] sm:text-[11px] font-bold text-cyan-700 truncate">เข้าแก้ไข {visitCount}</div>}
+                              {completeCount > 0 && <div className="rounded-xl bg-emerald-50 border border-emerald-100 px-2 py-1 text-[10px] sm:text-[11px] font-bold text-emerald-700 truncate">เสร็จสิ้น {completeCount}</div>}
+                              {dayEvents.slice(0, 2).map(event => (
+                                <button
+                                  key={`${event.type}-${event.defectId}`}
+                                  onClick={() => {
+                                    setActiveJobId(event.jobId);
+                                    setActiveTaskId(event.taskId);
+                                    setActiveDefectId(event.defectId);
+                                    setView('DEFECT_DETAIL');
+                                  }}
+                                  className={`w-full text-left rounded-xl px-2 py-1.5 text-[10px] sm:text-[11px] font-semibold transition-colors truncate ${event.type === 'visit' ? 'bg-cyan-500/10 text-cyan-800 hover:bg-cyan-500/20' : 'bg-emerald-500/10 text-emerald-800 hover:bg-emerald-500/20'}`}
+                                >
+                                  {event.site} · {event.unit}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div className="rounded-2xl bg-white border border-slate-200 px-4 py-3 flex items-center gap-3">
+                        <span className="w-3 h-3 rounded-full bg-cyan-500"></span>
+                        <div>
+                          <div className="text-sm font-bold text-slate-900">วันเข้าแก้ไข</div>
+                          <div className="text-xs text-slate-500">ใช้ข้อมูลจาก Sheet Defect Col C</div>
+                        </div>
+                      </div>
+                      <div className="rounded-2xl bg-white border border-slate-200 px-4 py-3 flex items-center gap-3">
+                        <span className="w-3 h-3 rounded-full bg-emerald-500"></span>
+                        <div>
+                          <div className="text-sm font-bold text-slate-900">วันแก้ไขเสร็จสิ้น</div>
+                          <div className="text-xs text-slate-500">ใช้ข้อมูลจาก Sheet Defect Col D</div>
+                        </div>
+                      </div>
+                      <div className="rounded-2xl bg-white border border-slate-200 px-4 py-3">
+                        <div className="text-sm font-bold text-slate-900">Plan Coverage</div>
+                        <div className="text-xs text-slate-500 mt-1">เปอร์เซ็นต์ defect ที่มีวันวางแผนอยู่ในระบบ</div>
+                        <div className="text-2xl font-extrabold text-brand-700 mt-2">{planHealth}%</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-6">
+                  <div className="bg-white rounded-[30px] border border-gray-100 shadow-sm p-5 md:p-6">
+                    <div className="flex items-start justify-between gap-4 mb-4">
+                      <div>
+                        <h3 className="text-lg font-extrabold text-gray-900">Today & Next Agenda</h3>
+                        <p className="text-sm text-gray-500 mt-1">ช่วย manager เห็นงานที่ต้องเข้า site วันนี้และงานต่อเนื่องถัดไป</p>
+                      </div>
+                      <div className="rounded-2xl bg-slate-50 px-3 py-2 text-right">
+                        <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">Today</div>
+                        <div className="text-sm font-bold text-slate-900 mt-1">{formatDashboardDate(today)}</div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      {(todayEvents.length > 0 ? todayEvents : upcomingAgenda).map(event => (
+                        <button
+                          key={`${event.type}-${event.defectId}-${event.date.toISOString()}`}
+                          onClick={() => {
+                            setActiveJobId(event.jobId);
+                            setActiveTaskId(event.taskId);
+                            setActiveDefectId(event.defectId);
+                            setView('DEFECT_DETAIL');
+                          }}
+                          className="w-full text-left rounded-2xl border border-slate-100 bg-slate-50/80 p-4 hover:border-brand-200 hover:bg-brand-50/40 transition-all"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap mb-2">
+                                <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${event.type === 'visit' ? 'bg-cyan-100 text-cyan-700' : 'bg-emerald-100 text-emerald-700'}`}>{event.title}</span>
+                                <StatusBadge status={event.status} size="sm" />
+                                {event.major === 'ใช่' && <span className="bg-rose-50 text-rose-700 text-[10px] font-bold px-2 py-1 rounded border border-rose-200">MAJOR</span>}
+                              </div>
+                              <div className="font-bold text-gray-900 truncate">{event.description || '-'}</div>
+                              <div className="text-sm text-gray-500 mt-1">{event.site} • อาคาร {event.building || '-'} / Unit {event.unit || '-'}</div>
+                              <div className="text-xs text-gray-400 mt-1">ทีม: {event.team} • ลูกค้า: {event.customerName}</div>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <div className="text-sm font-bold text-slate-900">{formatDashboardDate(event.date, { day: 'numeric', month: 'short' })}</div>
+                              <div className="text-[11px] text-slate-400 mt-1">{event.defectId}</div>
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                      {planningEvents.length === 0 && <div className="py-10 text-center text-gray-400 bg-gray-50 rounded-2xl border border-dashed border-gray-200">ยังไม่มีข้อมูลวันเข้าแก้ไขหรือวันแก้ไขเสร็จสิ้นสำหรับแสดงบน Calendar</div>}
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-[30px] border border-gray-100 shadow-sm p-5 md:p-6">
+                    <div className="flex items-start justify-between gap-4 mb-4">
+                      <div>
+                        <h3 className="text-lg font-extrabold text-gray-900">BA Planning Insights</h3>
+                        <p className="text-sm text-gray-500 mt-1">มุมมองเชิงวิเคราะห์เพื่อดู workload concentration และ capacity ของทีมในเดือนนี้</p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div className="rounded-2xl bg-gradient-to-br from-brand-700 to-teal-700 text-white p-5">
+                        <div className="text-sm text-white/80">Monthly Planning Health</div>
+                        <div className="text-4xl font-extrabold mt-2">{planHealth}%</div>
+                        <div className="mt-3 text-sm text-white/80">วัดจากสัดส่วน event ที่มีการกำหนดวันเข้าแก้ไขหรือวันเสร็จเทียบกับ defect ทั้งหมด</div>
+                        <div className="mt-4 w-full h-3 rounded-full bg-white/15 overflow-hidden">
+                          <div className="h-full rounded-full bg-emerald-400" style={{ width: `${Math.min(planHealth, 100)}%` }}></div>
+                        </div>
+                      </div>
+
+                      <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="text-sm font-bold text-slate-900">Peak Schedule Days</div>
+                          <div className="text-xs text-slate-500">วันที่มี event สูงสุดในเดือน</div>
+                        </div>
+                        <div className="space-y-3">
+                          {overloadedDates.map(item => (
+                            <div key={item.dateKey} className="rounded-2xl bg-white border border-slate-200 p-3">
+                              <div className="flex items-center justify-between gap-3">
+                                <div>
+                                  <div className="text-sm font-bold text-slate-900">{formatDashboardDate(item.dateKey)}</div>
+                                  <div className="text-xs text-slate-500 mt-1">เข้าแก้ไข {item.visit} • เสร็จสิ้น {item.complete}</div>
+                                </div>
+                                <div className="text-right">
+                                  <div className="text-xl font-extrabold text-brand-700">{item.total}</div>
+                                  <div className="text-[11px] text-slate-400">events</div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                          {overloadedDates.length === 0 && <div className="py-6 text-center text-slate-400 text-sm">ยังไม่มีวันที่มีแผนงานในเดือนนี้</div>}
+                        </div>
+                      </div>
+
+                      <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="text-sm font-bold text-slate-900">Team Workload Distribution</div>
+                          <div className="text-xs text-slate-500">ใช้ดูภาระงานรวมรายทีม</div>
+                        </div>
+                        <div className="space-y-3">
+                          {topTeams.map(team => {
+                            const width = monthEvents.length > 0 ? Math.max((team.total / monthEvents.length) * 100, 8) : 0;
+                            return (
+                              <div key={team.team}>
+                                <div className="flex items-center justify-between text-sm mb-1.5">
+                                  <span className="font-bold text-slate-800">{team.team}</span>
+                                  <span className="text-slate-500">{team.total} events</span>
+                                </div>
+                                <div className="h-3 rounded-full bg-white border border-slate-200 overflow-hidden">
+                                  <div className="h-full rounded-full bg-gradient-to-r from-brand-500 to-teal-500" style={{ width: `${width}%` }}></div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                          {topTeams.length === 0 && <div className="py-6 text-center text-slate-400 text-sm">ยังไม่มีข้อมูลทีมสำหรับวิเคราะห์ workload</div>}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
@@ -2746,6 +3087,7 @@
         const breadcrumbs = [
           { icon: <Icons.Home className="w-4 h-4 mb-0.5" />, label: 'Project', onClick: () => setView('JOB_LIST') }
         ];
+        const projectSummary = `${activeProjectsCount} Active Projects`;
         
         return (
           <div className="pb-8 w-full">
@@ -2755,17 +3097,26 @@
               badges={['Project Directory']}
               info={[{ value: jobs.length, label: 'Total Projects' }, { value: activeProjectsCount, label: 'Active Projects' }]}
               breadcrumbs={breadcrumbs}
-              action={
-                <button onClick={() => { setEditingJob(null); setShowJobForm(true); }} className="bg-brand-600 text-white px-3 py-2 rounded-lg text-sm font-bold hover:bg-brand-700 shadow-sm flex items-center transition-all hover:-translate-y-0.5">
-                  <Icons.Plus className="w-4 h-4 mr-1 shrink-0" /> <span className="hidden sm:inline">Create Project</span><span className="sm:hidden">Project</span>
-                </button>
-              }
             />
-            <div className="max-w-7xl mx-auto px-6 md:px-8">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-lg font-bold text-gray-800">Project Directory</h2>
+            <div className="max-w-7xl mx-auto px-4 md:px-8 mb-6">
+              <div className="border-b border-slate-200/80 pb-3">
+                <div className="flex flex-col gap-3 md:gap-4 lg:flex-row lg:items-center lg:justify-between">
+                  <div className="flex flex-col gap-1.5 min-w-0">
+                    <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">Project Directory</h2>
+                    <div className="text-sm text-slate-500">รายการโครงการทั้งหมด พร้อมสถานะและข้อมูลสรุปสำหรับติดตามงาน</div>
+                  </div>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between lg:justify-end lg:gap-4 lg:pl-4">
+                    <div className="inline-flex items-center justify-center sm:justify-start rounded-2xl bg-slate-50 px-3.5 py-2 text-sm font-semibold text-slate-600 whitespace-nowrap">
+                      <span>{projectSummary}</span>
+                    </div>
+                    <button onClick={() => { setEditingJob(null); setShowJobForm(true); }} className="w-full sm:w-auto inline-flex items-center justify-center rounded-2xl bg-brand-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-brand-700 whitespace-nowrap">
+                      <Icons.Plus className="w-4 h-4 mr-1.5 shrink-0" /> Create Project
+                    </button>
+                  </div>
+                </div>
               </div>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-6">
                 {jobs.map(job => (
                   <div key={job.id} onClick={() => { setActiveJobId(job.id); setView('JOB_DETAIL'); }} className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer flex flex-col justify-between">
                     <div>
@@ -2777,8 +3128,14 @@
                             <button onClick={(e) => handleDeleteJob(job.id, e)} className="text-gray-400 hover:text-red-500 p-1"><Icons.Trash /></button>
                           </div>
                         </div>
+                        <div className="flex items-center text-sm text-gray-500 gap-2">
+                          {job.replyDueDate && (
+                            <span className="text-[11px] text-gray-500 bg-gradient-to-br from-gray-50 to-slate-100 border border-gray-200 shadow-sm inline-block px-2 py-0.5 rounded-md font-medium">Due: {job.replyDueDate}</span>
+                          )}
+                          <span className="flex items-center"><Icons.File /><span className="ml-1">{job.tasks?.length || 0} Tasks</span></span>
+                        </div>
                       </div>
-                      <h3 className="text-lg font-bold text-gray-900">{job.site}</h3>
+                      <h3 className="text-lg font-bold text-gray-800">{job.site}</h3>
                       <p className="text-sm text-gray-500 mt-1">ID: {job.id} • Owner: {job.ownerCompany}</p>
                     </div>
                     <div className="mt-6 flex justify-between items-end">
@@ -2800,11 +3157,21 @@
       };
 
       const JobDetail = () => {
-        const sasTasks = activeJob?.tasks?.filter(t => t.scope === 'SAS') || [];
-        const voTasks = activeJob?.tasks?.filter(t => t.scope === 'VO') || [];
+        const normalizeTaskStatus = (status) => {
+          if (status === 'Active' || status === 'Closed') return status;
+          return 'รอดำเนินการ';
+        };
+        const filteredTasks = (activeJob?.tasks || []).filter(task => normalizeTaskStatus(task.status) === taskListStatusFilter);
+        const sasTasks = filteredTasks.filter(t => t.scope === 'SAS');
+        const voTasks = filteredTasks.filter(t => t.scope === 'VO');
         const pendingTaskPlans = (activeJob?.tasks || []).filter(task => (task.status || 'รอดำเนินการ') === 'รอดำเนินการ');
         const areAllPendingTaskPlansSelected = pendingTaskPlans.length > 0 && selectedTaskPlanIds.length === pendingTaskPlans.length;
         const handleToggleAllPendingTaskPlans = () => setSelectedTaskPlanIds(areAllPendingTaskPlansSelected ? [] : pendingTaskPlans.map(task => task.id));
+        const statusTabs = [
+          { label: 'รอดำเนินการ', count: (activeJob?.tasks || []).filter(task => normalizeTaskStatus(task.status) === 'รอดำเนินการ').length },
+          { label: 'Active', count: (activeJob?.tasks || []).filter(task => normalizeTaskStatus(task.status) === 'Active').length },
+          { label: 'Closed', count: (activeJob?.tasks || []).filter(task => normalizeTaskStatus(task.status) === 'Closed').length }
+        ];
 
         const breadcrumbs = [
           { icon: <Icons.Home className="w-4 h-4 mb-0.5" />, label: 'Project', onClick: () => setView('JOB_LIST') },
@@ -2822,13 +3189,13 @@
 
           return (
             <div onClick={() => { setActiveTaskId(task.id); setView('TASK_DETAIL'); }} 
-              className={`p-4 sm:p-5 rounded-2xl border shadow-sm transition-all cursor-pointer relative z-10 mb-4 ${
+              className={`group p-5 sm:p-6 rounded-[26px] border shadow-sm transition-all cursor-pointer relative z-10 mb-4 ${
                 isClosed 
-                  ? 'bg-gray-50/80 border-gray-200 hover:border-gray-300 opacity-95' 
-                  : 'bg-white border-gray-100 hover:border-brand-300 hover:bg-brand-50/30 transition-all'
+                  ? 'bg-slate-50/90 border-slate-200 hover:border-slate-300 opacity-95' 
+                  : 'bg-white border-slate-200/80 hover:border-brand-300 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-brand-100/40'
               }`}>
               
-              <div className="flex justify-between items-start mb-3">
+              <div className="flex justify-between items-start mb-4 gap-3">
                  <StatusBadge status={task.status} size="sm" />
                  
                  <div className={`shrink-0 flex items-center gap-2 transition-opacity ${isClosed ? 'opacity-100' : 'opacity-100 sm:opacity-0 group-hover:opacity-100'}`}>
@@ -2850,18 +3217,16 @@
                  </div>
               </div>
 
-              <div className="flex flex-col pl-1">
-                <h4 className={`text-base sm:text-lg font-bold flex flex-wrap items-center gap-2 mb-1.5 ${isClosed ? 'text-gray-600' : 'text-gray-900'}`}>
+              <div className="flex flex-col">
+                <h4 className={`text-base sm:text-lg font-bold flex flex-wrap items-center gap-2 mb-2 ${isClosed ? 'text-slate-600' : 'text-slate-900'}`}>
                   <span className="truncate">{task.customerName || '- ไม่ระบุชื่อลูกค้า -'}</span>
-                  <span className={`text-xs font-medium px-2 py-0.5 rounded-md whitespace-nowrap ${isClosed ? 'bg-gray-200/50 text-gray-500' : 'bg-gray-50 text-gray-400 border border-gray-100'}`}>ID: {task.id.split('-').pop()}</span>
+                  <span className={`text-xs font-medium px-2.5 py-1 rounded-lg whitespace-nowrap ${isClosed ? 'bg-slate-200/70 text-slate-500' : 'bg-slate-50 text-slate-500 border border-slate-200'}`}>ID: {task.id.split('-').pop()}</span>
                 </h4>
 
-                <div className={`flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs sm:text-sm mt-1 ${isClosed ? 'text-gray-400' : 'text-gray-500'}`}>
-                  <span className={`font-semibold ${isClosed ? 'text-gray-500' : 'text-gray-700'}`}>อาคาร {task.building} - Unit {task.unit}</span>
-                  <span className="hidden sm:inline text-gray-300">|</span>
-                  <span>Defects: <strong className={isClosed ? 'text-gray-500' : 'text-gray-700'}>{task.defects?.length || 0}</strong></span>
-                  <span className="hidden sm:inline text-gray-300">|</span>
-                  <span>Target Date: <strong className={isClosed ? 'text-gray-500' : 'text-gray-700'}>{formattedDate}</strong></span>
+                <div className={`flex flex-wrap items-center gap-2 text-xs sm:text-sm mt-1 ${isClosed ? 'text-slate-400' : 'text-slate-500'}`}>
+                  <span className={`inline-flex items-center rounded-full px-3 py-1 ${isClosed ? 'bg-slate-100 text-slate-500' : 'bg-slate-50 text-slate-700 border border-slate-200'} font-semibold`}>อาคาร {task.building} - Unit {task.unit}</span>
+                  <span className={`inline-flex items-center rounded-full px-3 py-1 ${isClosed ? 'bg-slate-100 text-slate-500' : 'bg-slate-50 text-slate-700 border border-slate-200'}`}>Defects: <strong className={`ml-1 ${isClosed ? 'text-slate-500' : 'text-slate-800'}`}>{task.defects?.length || 0}</strong></span>
+                  <span className={`inline-flex items-center rounded-full px-3 py-1 ${isClosed ? 'bg-slate-100 text-slate-500' : 'bg-slate-50 text-slate-700 border border-slate-200'}`}>Target Date: <strong className={`ml-1 ${isClosed ? 'text-slate-500' : 'text-slate-800'}`}>{formattedDate}</strong></span>
                 </div>
               </div>
             </div>
@@ -2869,64 +3234,84 @@
         };
 
         return (
-          <div className="flex flex-col h-full w-full pb-8">
+          <div className="pb-8 w-full">
             <PageHeader 
               title={activeJob?.site} 
               subtitle={activeJob?.id} 
               badges={[activeJob?.status]} 
               breadcrumbs={breadcrumbs}
               info={[{ value: activeJob?.tasks?.length || 0, label: 'Total Tasks' }, { value: activeJob?.ownerCompany, label: 'Company' }]}
-              action={
-                <button onClick={() => setShowTaskForm(true)} className="bg-brand-600 text-white px-3 py-2 rounded-lg text-sm font-bold hover:bg-brand-700 shadow-sm flex items-center transition-all hover:-translate-y-0.5">
-                  <Icons.Plus className="w-4 h-4 mr-1 shrink-0" /> <span className="hidden sm:inline">Add Task</span><span className="sm:hidden">Task</span>
-                </button>
-              }
             />
-            <TabMenu tabs={['Tasks & Events', 'Documents']} activeTab="Tasks & Events" />
-
-            <div className="max-w-7xl mx-auto w-full px-6 md:px-8">
-              <div className="flex justify-between items-center mb-4">
-                <div>
-                  <h3 className="text-lg font-bold text-gray-900">Task List</h3>
-                  <div className="text-sm text-gray-500 mt-1">Export เอกสารแผนงานเฉพาะใบงานย่อยสถานะรอดำเนินการ และเลือกได้ทั้งรายใบหรือทั้งหมด</div>
-                </div>
-                {pendingTaskPlans.length > 0 && (
-                  <div className="flex flex-col sm:flex-row gap-3">
-                    <div className="rounded-2xl border border-brand-100 bg-white px-4 py-3 shadow-sm">
-                      <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand-500">Pending Plans</div>
-                      <div className="text-sm font-bold text-gray-900 mt-1">{pendingTaskPlans.length} ใบงานพร้อม Export</div>
+            <div className="max-w-7xl mx-auto w-full px-4 md:px-8 mb-6">
+              <div className="border-b border-slate-200/80 pb-3">
+                <div className="flex flex-col gap-3 md:gap-4 lg:flex-row lg:items-center lg:justify-between">
+                  <div className="flex flex-col gap-3 min-w-0 lg:flex-1 lg:flex-row lg:items-center lg:justify-between lg:gap-6">
+                    <h3 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight whitespace-nowrap">Task List</h3>
+                    <div className="overflow-x-auto no-scrollbar lg:flex-1 lg:flex lg:justify-center">
+                      <div className="inline-flex min-w-max items-center gap-1.5 rounded-[22px] bg-slate-50/90 p-1">
+                        {statusTabs.map(tab => {
+                          const isActive = taskListStatusFilter === tab.label;
+                          return (
+                            <button
+                              key={tab.label}
+                              onClick={() => setTaskListStatusFilter(tab.label)}
+                              className={`inline-flex items-center justify-center gap-2 rounded-2xl px-3.5 py-2 text-sm font-semibold whitespace-nowrap transition-all ${isActive ? 'bg-gradient-to-r from-brand-600 to-teal-600 text-white shadow-md shadow-brand-200/60' : 'bg-transparent text-slate-500 hover:bg-white hover:text-slate-700'}`}
+                            >
+                              <span>{tab.label}</span>
+                              <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'}`}>{tab.count}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
-                    <button onClick={handleExportTaskPlans} className="inline-flex items-center justify-center rounded-2xl bg-brand-600 px-4 py-3 text-sm font-bold text-white shadow-sm hover:bg-brand-700 transition-colors">
-                      <Icons.Download className="w-4 h-4 mr-2" /> เลือกใบงานเพื่อ Export
+                  </div>
+                  <div className="flex items-center justify-end gap-2 sm:gap-3 lg:pl-4">
+                    {taskListStatusFilter === 'รอดำเนินการ' && pendingTaskPlans.length > 0 && (
+                      <button onClick={handleExportTaskPlans} className="inline-flex items-center justify-center rounded-2xl bg-gradient-to-r from-brand-600 to-teal-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm shadow-brand-200/50 hover:from-brand-700 hover:to-teal-700 transition-all hover:-translate-y-0.5 whitespace-nowrap">
+                        <Icons.Download className="w-4 h-4 mr-2" /> Export
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setShowTaskForm(true)}
+                      disabled={taskListStatusFilter !== 'รอดำเนินการ'}
+                      className="inline-flex items-center justify-center rounded-2xl bg-brand-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-brand-700 disabled:bg-gray-300 disabled:text-gray-500 disabled:shadow-none disabled:cursor-not-allowed disabled:hover:bg-gray-300 disabled:hover:translate-y-0 whitespace-nowrap"
+                    >
+                      <Icons.Plus className="w-4 h-4 mr-1.5 shrink-0" /> Add Task
                     </button>
                   </div>
-                )}
+                </div>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 pb-10 mt-2">
-                {/* SAS Column */}
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 xl:gap-7 pb-10 mt-6">
                 <div className="flex flex-col">
-                  <h3 className="text-lg font-bold text-blue-800 border-b-2 border-blue-100 pb-3 mb-4 flex items-center gap-2">
-                    <span className="bg-blue-100 text-blue-700 p-1.5 rounded-lg flex items-center justify-center"><Icons.Building /></span> Scope SAS
-                    <span className="ml-auto bg-blue-100 text-blue-800 text-xs px-2.5 py-1 rounded-full">{sasTasks.length}</span>
-                  </h3>
+                  <div className="rounded-[26px] border border-blue-100 bg-gradient-to-r from-blue-50 to-white px-4 py-4 mb-4 flex items-center gap-3 shadow-sm">
+                    <span className="w-10 h-10 bg-blue-100 text-blue-700 rounded-2xl flex items-center justify-center shadow-sm"><Icons.Building /></span>
+                    <div className="min-w-0">
+                      <div className="text-lg font-extrabold text-blue-900 leading-tight">Scope SAS</div>
+                      <div className="text-xs text-blue-500 font-semibold mt-0.5">งานในกลุ่มรับผิดชอบ SAS</div>
+                    </div>
+                    <span className="ml-auto bg-white text-blue-700 text-xs px-3 py-1.5 rounded-full border border-blue-100 font-bold shadow-sm">{sasTasks.length}</span>
+                  </div>
                   <div className="flex flex-col">
                     {sasTasks.length > 0 ? sasTasks.map(task => (
                       <TaskCard key={task.id} task={task} />
-                    )) : <div className="text-center py-8 text-gray-400 bg-white rounded-2xl border border-dashed border-gray-200 text-sm">ไม่มีใบงานย่อย Scope SAS</div>}
+                    )) : <div className="text-center py-12 text-slate-400 bg-white rounded-[26px] border border-dashed border-slate-200 text-sm shadow-sm">ไม่มีใบงานย่อย Scope SAS สถานะ {taskListStatusFilter}</div>}
                   </div>
                 </div>
 
-                {/* VO Column */}
                 <div className="flex flex-col">
-                  <h3 className="text-lg font-bold text-purple-800 border-b-2 border-purple-100 pb-3 mb-4 flex items-center gap-2">
-                    <span className="bg-purple-100 text-purple-700 p-1.5 rounded-lg flex items-center justify-center"><Icons.Building /></span> Scope VO
-                    <span className="ml-auto bg-purple-100 text-purple-800 text-xs px-2.5 py-1 rounded-full">{voTasks.length}</span>
-                  </h3>
+                  <div className="rounded-[26px] border border-purple-100 bg-gradient-to-r from-purple-50 to-white px-4 py-4 mb-4 flex items-center gap-3 shadow-sm">
+                    <span className="w-10 h-10 bg-purple-100 text-purple-700 rounded-2xl flex items-center justify-center shadow-sm"><Icons.Building /></span>
+                    <div className="min-w-0">
+                      <div className="text-lg font-extrabold text-purple-900 leading-tight">Scope VO</div>
+                      <div className="text-xs text-purple-500 font-semibold mt-0.5">งานในกลุ่มรับผิดชอบ VO</div>
+                    </div>
+                    <span className="ml-auto bg-white text-purple-700 text-xs px-3 py-1.5 rounded-full border border-purple-100 font-bold shadow-sm">{voTasks.length}</span>
+                  </div>
                   <div className="flex flex-col">
                     {voTasks.length > 0 ? voTasks.map(task => (
                       <TaskCard key={task.id} task={task} />
-                    )) : <div className="text-center py-8 text-gray-400 bg-white rounded-2xl border border-dashed border-gray-200 text-sm">ไม่มีใบงานย่อย Scope VO</div>}
+                    )) : <div className="text-center py-12 text-slate-400 bg-white rounded-[26px] border border-dashed border-slate-200 text-sm shadow-sm">ไม่มีใบงานย่อย Scope VO สถานะ {taskListStatusFilter}</div>}
                   </div>
                 </div>
               </div>
@@ -2942,6 +3327,13 @@
           { label: activeTask?.id, onClick: () => setView('TASK_DETAIL') }
         ];
 
+        const formatDefectDate = (value) => {
+          if (!value) return '-';
+          const parsed = new Date(value);
+          if (Number.isNaN(parsed.getTime())) return value;
+          return parsed.toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' });
+        };
+
         return (
           <div className="pb-8 w-full">
             <PageHeader
@@ -2954,50 +3346,71 @@
                 { value: activeTask?.unit, label: 'Unit' },
                 { value: activeTask?.customerName, label: 'Customer' }
               ]}
-              action={
-                <button onClick={() => setShowDefectForm(true)} disabled={activeTask?.status === 'Closed' || activeTask?.status === 'Reject'} className="bg-brand-600 text-white px-3 py-2 rounded-lg text-sm font-bold hover:bg-brand-700 shadow-sm flex items-center transition-all hover:-translate-y-0.5 disabled:bg-gray-300 disabled:cursor-not-allowed">
-                  <Icons.Plus className="w-4 h-4 mr-1 shrink-0" /> Add Defect
-                </button>
-              }
             />
             <div className="max-w-7xl mx-auto px-6 md:px-8 mt-6">
-              
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-bold text-gray-800">Defect List</h3>
-                {activeTask?.status !== 'Closed' && activeTask?.status !== 'Reject' && (
-                  <div className="flex gap-2">
-                     <button onClick={() => handleUpdateTaskStatus(activeTask.id, 'Active')} className="px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg text-sm font-bold border border-blue-200 transition-colors">Active</button>
-                     <button onClick={() => handleUpdateTaskStatus(activeTask.id, 'Closed')} className="px-3 py-1.5 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-lg text-sm font-bold border border-emerald-200 transition-colors">Close Task</button>
+              <div className="border-b border-slate-200/80 pb-3 mb-6">
+                <div className="flex flex-col gap-3 md:gap-4 lg:flex-row lg:items-center lg:justify-between">
+                  <div className="flex flex-col gap-3 min-w-0 lg:flex-1 lg:flex-row lg:items-center lg:justify-between lg:gap-6">
+                    <h3 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight whitespace-nowrap">Defect List</h3>
+                    <div className="overflow-x-auto no-scrollbar lg:flex-1 lg:flex lg:justify-center">
+                      <div className="inline-flex min-w-max items-center gap-1.5 rounded-[22px] bg-slate-50/90 p-1">
+                        <button
+                          onClick={() => handleUpdateTaskStatus(activeTask.id, 'Active')}
+                          className={`inline-flex items-center justify-center gap-2 rounded-2xl px-3.5 py-2 text-sm font-semibold whitespace-nowrap transition-all ${activeTask?.status === 'Active' ? 'bg-gradient-to-r from-brand-600 to-teal-600 text-white shadow-md shadow-brand-200/60' : 'bg-transparent text-slate-500 hover:bg-white hover:text-slate-700'}`}
+                        >
+                          <span>Active</span>
+                        </button>
+                        <button
+                          onClick={() => handleUpdateTaskStatus(activeTask.id, 'Closed')}
+                          className={`inline-flex items-center justify-center gap-2 rounded-2xl px-3.5 py-2 text-sm font-semibold whitespace-nowrap transition-all ${activeTask?.status === 'Closed' ? 'bg-gradient-to-r from-brand-600 to-teal-600 text-white shadow-md shadow-brand-200/60' : 'bg-transparent text-slate-500 hover:bg-white hover:text-slate-700'}`}
+                        >
+                          <span>Closed</span>
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                )}
+                  <div className="flex items-center justify-end gap-2 sm:gap-3 lg:pl-4">
+                    <button onClick={() => setShowDefectForm(true)} disabled={activeTask?.status === 'Closed' || activeTask?.status === 'Reject'} className="w-full sm:w-auto inline-flex items-center justify-center rounded-2xl bg-brand-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-brand-700 disabled:bg-gray-300 disabled:text-gray-500 disabled:shadow-none disabled:cursor-not-allowed disabled:hover:bg-gray-300 disabled:hover:translate-y-0 whitespace-nowrap">
+                      <Icons.Plus className="w-4 h-4 mr-1.5 shrink-0" /> Add Defect
+                    </button>
+                  </div>
+                </div>
               </div>
 
               <div className="hidden md:block">
                 <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                  <div className="grid grid-cols-[50px_1fr_140px_140px_120px_100px_44px] gap-0 px-4 py-3 bg-gray-50 border-b border-gray-200 text-xs font-bold text-gray-500 uppercase tracking-wide">
-                    <div className="text-center">#</div>
-                    <div>รายละเอียด</div>
-                    <div>หมวดหมู่</div>
-                    <div>ทีม</div>
-                    <div>สถานะ</div>
-                    <div>Major</div>
-                    <div></div>
-                  </div>
-                  {(activeTask?.defects || []).map((defect, idx) => (
-                    <div key={defect.id} onClick={() => { setActiveDefectId(defect.id); setView('DEFECT_DETAIL'); }} className="grid grid-cols-[50px_1fr_140px_140px_120px_100px_44px] gap-0 px-4 py-3.5 border-b border-gray-100 last:border-b-0 hover:bg-brand-50/40 cursor-pointer transition-colors items-center">
-                      <div className="text-center text-sm font-bold text-gray-400">{idx + 1}</div>
-                      <div className="pr-3 min-w-0">
-                        <div className="text-sm font-bold text-gray-900 truncate">{defect.description}</div>
-                        <div className="text-xs text-gray-400 mt-0.5">ID: {defect.id}</div>
+                  <div className="overflow-x-auto">
+                    <div className="min-w-[1200px]">
+                      <div className="grid grid-cols-[50px_1.4fr_170px_150px_140px_140px_120px_100px_44px] gap-0 px-4 py-3 bg-gray-50 border-b border-gray-200 text-xs font-bold text-gray-500 uppercase tracking-wide">
+                        <div className="text-center">#</div>
+                        <div>รายละเอียด</div>
+                        <div>หมวดหมู่</div>
+                        <div>ทีม</div>
+                        <div>วันเข้าแก้ไข</div>
+                        <div>วันแก้ไขเสร็จสิ้น</div>
+                        <div>สถานะ</div>
+                        <div>Major</div>
+                        <div></div>
                       </div>
-                      <div className="text-xs text-gray-600 truncate">{defect.mainCategory}<br/><span className="text-gray-400">{defect.subCategory}</span></div>
-                      <div className="text-xs text-gray-600 truncate">{defect.team || '-'}</div>
-                      <div><StatusBadge status={defect.status} size="sm" /></div>
-                      <div>{defect.major === 'ใช่' ? <span className="bg-rose-50 text-rose-700 text-[10px] font-bold px-2 py-1 rounded border border-rose-200">MAJOR</span> : <span className="text-xs text-gray-400">-</span>}</div>
-                      <div><button onClick={(e) => handleDeleteDefect(defect.id, e)} disabled={activeTask?.status === 'Closed'} className="text-gray-400 hover:text-red-500 p-1 transition-colors disabled:opacity-30"><Icons.Trash className="w-4 h-4" /></button></div>
+                      {(activeTask?.defects || []).map((defect, idx) => (
+                        <div key={defect.id} onClick={() => { setActiveDefectId(defect.id); setView('DEFECT_DETAIL'); }} className="grid grid-cols-[50px_1.4fr_170px_150px_140px_140px_120px_100px_44px] gap-0 px-4 py-3.5 border-b border-gray-100 last:border-b-0 hover:bg-brand-50/40 cursor-pointer transition-colors items-center">
+                          <div className="text-center text-sm font-bold text-gray-400">{idx + 1}</div>
+                          <div className="pr-3 min-w-0">
+                            <div className="text-sm font-bold text-gray-900 truncate">{defect.description}</div>
+                            <div className="text-xs text-gray-400 mt-0.5">ID: {defect.id}</div>
+                          </div>
+                          <div className="text-xs text-gray-600 truncate">{defect.mainCategory}<br/><span className="text-gray-400">{defect.subCategory}</span></div>
+                          <div className="text-xs text-gray-600 truncate">{defect.team || '-'}</div>
+                          <div className="text-xs text-gray-600">{formatDefectDate(defect.targetStartDate)}</div>
+                          <div className="text-xs text-gray-600">{formatDefectDate(defect.targetEndDate)}</div>
+                          <div><StatusBadge status={defect.status} size="sm" /></div>
+                          <div>{defect.major === 'ใช่' ? <span className="bg-rose-50 text-rose-700 text-[10px] font-bold px-2 py-1 rounded border border-rose-200">MAJOR</span> : <span className="text-xs text-gray-400">-</span>}</div>
+                          <div><button onClick={(e) => handleDeleteDefect(defect.id, e)} disabled={activeTask?.status === 'Closed'} className="text-gray-400 hover:text-red-500 p-1 transition-colors disabled:opacity-30"><Icons.Trash className="w-4 h-4" /></button></div>
+                        </div>
+                      ))}
+                      {(activeTask?.defects || []).length === 0 && <div className="py-12 text-center text-gray-400">ไม่มีรายการ Defect ในใบงานนี้</div>}
                     </div>
-                  ))}
-                  {(activeTask?.defects || []).length === 0 && <div className="py-12 text-center text-gray-400">ไม่มีรายการ Defect ในใบงานนี้</div>}
+                  </div>
                 </div>
               </div>
 
@@ -3014,9 +3427,19 @@
                     </div>
                     <h3 className="text-base font-bold text-gray-900 leading-snug line-clamp-2">{defect.description}</h3>
                     <div className="text-sm text-gray-500 mt-2">{defect.mainCategory} / {defect.subCategory}</div>
-                    <div className="text-xs text-gray-400 mt-1 flex items-center justify-between">
-                       <span>ทีม: <strong className="text-gray-600">{defect.team || '-'}</strong></span>
-                       <span>ID: {defect.id.split('-').pop()}</span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3">
+                      <div className="rounded-2xl bg-slate-50 border border-slate-100 px-3 py-2.5">
+                        <div className="text-[11px] font-bold uppercase tracking-wide text-slate-400">วันเข้าแก้ไข</div>
+                        <div className="text-sm font-semibold text-slate-700 mt-1">{formatDefectDate(defect.targetStartDate)}</div>
+                      </div>
+                      <div className="rounded-2xl bg-slate-50 border border-slate-100 px-3 py-2.5">
+                        <div className="text-[11px] font-bold uppercase tracking-wide text-slate-400">วันแก้ไขเสร็จสิ้น</div>
+                        <div className="text-sm font-semibold text-slate-700 mt-1">{formatDefectDate(defect.targetEndDate)}</div>
+                      </div>
+                    </div>
+                    <div className="text-xs text-gray-400 mt-3 flex items-center justify-between gap-3">
+                       <span className="min-w-0">ทีม: <strong className="text-gray-600">{defect.team || '-'}</strong></span>
+                       <span className="shrink-0">ID: {defect.id.split('-').pop()}</span>
                     </div>
                   </div>
                 ))}
@@ -3061,8 +3484,112 @@
                      )}
                   </div>
                   
-                  <DefectImagesUploader defect={activeDefect} taskStatus={activeTask?.status} onSuccess={handleRefreshData} />
+                  <DefectImagesUploader defect={activeDefect} taskStatus={activeTask?.status} onSuccess={handleRefreshData} isSupplier={isSupplier} />
                </div>
+            </div>
+          </div>
+        );
+      };
+
+      const SettingsView = () => {
+        const positionLabel = isAdmin ? 'Admin' : 'Staff';
+        const capabilityItems = isAdmin
+          ? [
+              { title: 'Full System Control', description: 'จัดการทุกเมนูในระบบ รวมถึง User Management และการกำหนดสิทธิ์ผู้ใช้งาน' },
+              { title: 'Operational Authority', description: 'ควบคุมสถานะ Project, Task และ Defect รวมถึงติดตามภาพรวมการทำงานทั้งหมด' },
+              { title: 'Planning & Monitor', description: 'ใช้ Dashboard และมุมมองการวางแผนเพื่อติดตามภาระงานและแผนเข้าแก้ไข' }
+            ]
+          : [
+              { title: 'Web-app Operations', description: 'ใช้งานทุกอย่างตามเงื่อนไขของ Web-app สำหรับ Project, Task และ Defect' },
+              { title: 'Field Execution', description: 'ติดตามและอัปเดตหน้างาน พร้อมตรวจสอบ defect และภาพประกอบในระบบ' },
+              { title: 'Personal Settings', description: 'อัปเดตข้อมูลส่วนตัว รหัสผ่าน และข้อมูลติดต่อสำหรับการใช้งานประจำวัน' }
+            ];
+
+        return (
+          <div className="pb-8 w-full">
+            <PageHeader 
+              title="Settings"
+              subtitle={`${positionLabel.toUpperCase()} CONTROL PANEL`}
+              badges={[positionLabel, isAdmin ? 'Full Access' : 'Web-app Rules']}
+              info={[{ value: currentUser?.userId, label: 'User ID' }, { value: currentUser?.team || '-', label: 'Team' }]}
+            />
+            <div className="max-w-7xl mx-auto px-6 md:px-8 space-y-6">
+              <div className="rounded-[30px] border border-brand-100 bg-gradient-to-r from-brand-50 via-white to-teal-50 p-6 md:p-7 shadow-sm">
+                <div className="text-xs font-bold uppercase tracking-[0.18em] text-brand-500">Role-based Settings</div>
+                <div className="text-2xl md:text-3xl font-extrabold text-slate-900 mt-3">หน้าตั้งค่าสำหรับ {positionLabel}</div>
+                <div className="text-sm md:text-base text-slate-600 mt-2">Admin ทำได้ทุกอย่าง, Staff ทำได้ทุกอย่างตามเงื่อนไข Web-app และ Supplier ทำได้เฉพาะการเพิ่มรูปเท่านั้น</div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {capabilityItems.map(item => (
+                  <div key={item.title} className="bg-white rounded-3xl border border-gray-100 shadow-sm p-5">
+                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-500 to-teal-500 text-white flex items-center justify-center shadow-lg">
+                      <Icons.Settings className="w-5 h-5" />
+                    </div>
+                    <div className="text-lg font-extrabold text-gray-900 mt-4">{item.title}</div>
+                    <div className="text-sm text-gray-500 mt-2 leading-relaxed">{item.description}</div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)] gap-6">
+                <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 md:p-8 space-y-5">
+                  <div>
+                    <div className="text-xs font-bold uppercase tracking-[0.18em] text-brand-500">Profile Settings</div>
+                    <div className="text-2xl font-extrabold text-gray-900 mt-2">ข้อมูลบัญชีและรหัสผ่าน</div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">ชื่อ นามสกุล</label>
+                      <input type="text" value={profileForm.fullName} onChange={e => setProfileForm(prev => ({ ...prev, fullName: e.target.value }))} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm outline-none focus:border-brand-500" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Email</label>
+                      <input type="email" value={profileForm.email} onChange={e => setProfileForm(prev => ({ ...prev, email: e.target.value }))} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm outline-none focus:border-brand-500" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Line</label>
+                      <input type="text" value={profileForm.line} onChange={e => setProfileForm(prev => ({ ...prev, line: e.target.value }))} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm outline-none focus:border-brand-500" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Phone</label>
+                      <input type="text" value={profileForm.phone} onChange={e => setProfileForm(prev => ({ ...prev, phone: e.target.value }))} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm outline-none focus:border-brand-500" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Password</label>
+                      <input type="password" value={profileForm.password} onChange={e => setProfileForm(prev => ({ ...prev, password: e.target.value }))} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm outline-none focus:border-brand-500" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Confirm Password</label>
+                      <input type="password" value={profileForm.confirmPassword} onChange={e => setProfileForm(prev => ({ ...prev, confirmPassword: e.target.value }))} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm outline-none focus:border-brand-500" />
+                    </div>
+                  </div>
+                  <div className="flex justify-end">
+                    <button onClick={handleSaveProfile} className="bg-brand-600 text-white px-5 py-3 rounded-xl text-sm font-bold hover:bg-brand-700 shadow-sm">Save Settings</button>
+                  </div>
+                </div>
+
+                <div className="space-y-6">
+                  <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
+                    <div className="text-xs font-bold uppercase tracking-[0.18em] text-gray-400">Position Scope</div>
+                    <div className="text-xl font-extrabold text-gray-900 mt-2">สิทธิ์การใช้งานในระบบ</div>
+                    <div className="space-y-3 mt-5">
+                      <div className="rounded-2xl bg-slate-50 border border-slate-100 px-4 py-3">
+                        <div className="text-sm font-bold text-slate-900">Admin</div>
+                        <div className="text-sm text-slate-500 mt-1">เข้าถึงทุกเมนูและบริหารผู้ใช้งานได้ครบทั้งหมด</div>
+                      </div>
+                      <div className="rounded-2xl bg-slate-50 border border-slate-100 px-4 py-3">
+                        <div className="text-sm font-bold text-slate-900">Staff</div>
+                        <div className="text-sm text-slate-500 mt-1">ทำงานตามสิทธิ์บน Web-app ได้ครบ แต่ไม่เข้าถึง User Management</div>
+                      </div>
+                      <div className="rounded-2xl bg-cyan-50 border border-cyan-100 px-4 py-3">
+                        <div className="text-sm font-bold text-cyan-900">Supplier</div>
+                        <div className="text-sm text-cyan-700 mt-1">ดู defect ของทีมตัวเองและเพิ่ม/บันทึกรูปภาพได้เท่านั้น</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         );
@@ -3226,6 +3753,7 @@
               <TopHeader onRefresh={handleRefreshData} isRefreshing={isRefreshing} view={view} onToggleSidebar={toggleSidebar} />
               <main id="main-scroll-area" className="flex-1 overflow-y-auto w-full relative no-scrollbar">
                  {view === 'DASHBOARD' && <DashboardView />}
+                 {view === 'SETTINGS' && canAccessSettings && <SettingsView />}
                  {view === 'USER_MANAGEMENT' && <UserManagementView />}
                  {!isAdmin && view === 'PROFILE_SETTINGS' && <ProfileSettingsView />}
                  {view === 'SUPPLIER_DEFECTS' && <SupplierDefectsView />}
