@@ -3115,40 +3115,67 @@
                   </div>
                 </div>
               </div>
-
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-6">
-                {jobs.map(job => (
-                  <div key={job.id} onClick={() => { setActiveJobId(job.id); setView('JOB_DETAIL'); }} className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer flex flex-col justify-between">
-                    <div>
-                      <div className="flex justify-between items-start mb-3">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <StatusBadge status={job.status} size="lg" />
-                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onClick={(e) => { e.stopPropagation(); setEditingJob(job); setShowJobForm(true); }} className="text-gray-400 hover:text-brand-600 p-1"><Icons.Settings /></button>
-                            <button onClick={(e) => handleDeleteJob(job.id, e)} className="text-gray-400 hover:text-red-500 p-1"><Icons.Trash /></button>
+                {jobs.map(job => {
+                  const childTasks = job.tasks || [];
+                  const normalizedJobStatus = String(job.status || '').trim();
+                  const isMainJobLocked = normalizedJobStatus === 'รอดำเนินการ';
+                  const isChildTasksLocked = childTasks.length === 2 && childTasks.every(task => String(task.status || '').trim() === 'Active');
+                  const isActionLocked = isMainJobLocked || isChildTasksLocked;
+                  const lockedTitle = isMainJobLocked
+                    ? 'ไม่สามารถดำเนินการได้เมื่อสถานะใบงานหลักเป็น รอดำเนินการ'
+                    : 'ไม่สามารถดำเนินการได้เมื่อใบงานย่อยทั้งสองอยู่ในสถานะ Active';
+
+                  return (
+                    <div key={job.id} onClick={() => { setActiveJobId(job.id); setView('JOB_DETAIL'); }} className="group bg-white p-5 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer flex flex-col justify-between">
+                      <div>
+                        <div className="flex justify-between items-start mb-3 gap-3">
+                          <div className="flex items-center gap-2 flex-wrap min-w-0">
+                            <StatusBadge status={job.status} size="lg" />
+                          </div>
+                          <div className={`flex items-center gap-2 shrink-0 transition-all ${isActionLocked ? 'opacity-100' : 'opacity-100 md:opacity-0 md:pointer-events-none md:group-hover:opacity-100 md:group-hover:pointer-events-auto'}`}>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (isActionLocked) return;
+                                setEditingJob(job);
+                                setShowJobForm(true);
+                              }}
+                              disabled={isActionLocked}
+                              title={isActionLocked ? lockedTitle : 'ตั้งค่า Project'}
+                              className={`p-2 rounded-xl border transition-colors ${isActionLocked ? 'bg-gray-100 border-gray-200 text-gray-300 cursor-not-allowed' : 'bg-white border-gray-200 text-gray-400 hover:text-brand-600 hover:border-brand-200'}`}
+                            >
+                              <Icons.Settings />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (isActionLocked) return;
+                                handleDeleteJob(job.id, e);
+                              }}
+                              disabled={isActionLocked}
+                              title={isActionLocked ? lockedTitle : 'ลบ Project'}
+                              className={`p-2 rounded-xl border transition-colors ${isActionLocked ? 'bg-gray-100 border-gray-200 text-gray-300 cursor-not-allowed' : 'bg-white border-gray-200 text-gray-400 hover:text-red-500 hover:border-red-200'}`}
+                            >
+                              <Icons.Trash className="w-4 h-4" />
+                            </button>
                           </div>
                         </div>
-                        <div className="flex items-center text-sm text-gray-500 gap-2">
+                        <h3 className="text-lg font-bold text-gray-800">{job.site}</h3>
+                        <p className="text-sm text-gray-500 mt-1">ID: {job.id} • Owner: {job.ownerCompany}</p>
+                      </div>
+                      <div className="mt-6 flex justify-between items-end gap-3">
+                        <div className="flex -space-x-2"><Avatar name={job.staff} /><Avatar name={job.owner} /></div>
+                        <div className="flex items-center text-sm text-gray-500 gap-2 flex-wrap justify-end">
                           {job.replyDueDate && (
                             <span className="text-[11px] text-gray-500 bg-gradient-to-br from-gray-50 to-slate-100 border border-gray-200 shadow-sm inline-block px-2 py-0.5 rounded-md font-medium">Due: {job.replyDueDate}</span>
                           )}
                           <span className="flex items-center"><Icons.File /><span className="ml-1">{job.tasks?.length || 0} Tasks</span></span>
                         </div>
                       </div>
-                      <h3 className="text-lg font-bold text-gray-800">{job.site}</h3>
-                      <p className="text-sm text-gray-500 mt-1">ID: {job.id} • Owner: {job.ownerCompany}</p>
                     </div>
-                    <div className="mt-6 flex justify-between items-end">
-                      <div className="flex -space-x-2"><Avatar name={job.staff} /><Avatar name={job.owner} /></div>
-                      <div className="flex items-center text-sm text-gray-500 gap-2">
-                        {job.replyDueDate && (
-                          <span className="text-[11px] text-gray-500 bg-gradient-to-br from-gray-50 to-slate-100 border border-gray-200 shadow-sm inline-block px-2 py-0.5 rounded-md font-medium">Due: {job.replyDueDate}</span>
-                        )}
-                        <span className="flex items-center"><Icons.File /><span className="ml-1">{job.tasks?.length || 0} Tasks</span></span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
                 {jobs.length === 0 && <div className="col-span-full py-12 text-center text-gray-400 bg-white border border-dashed border-gray-200 rounded-3xl">No projects found.</div>}
               </div>
             </div>
