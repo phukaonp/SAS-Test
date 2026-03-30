@@ -882,18 +882,274 @@ function escapeHtml_(value) {
     .replace(/'/g, '&#39;');
 }
 
+function getTaskPlanExportData_(jobId, taskIds) {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const jobSheet = ss.getSheetByName('JOB');
+  const taskSheet = ss.getSheetByName('TASK');
+  const defectSheet = ss.getSheetByName('DEFECT');
+
+  if (!jobSheet || !taskSheet || !defectSheet) throw new Error('ไม่พบชีตข้อมูลสำหรับ Export PDF');
+
+  const mapRows = (sheet) => {
+    const values = sheet.getDataRange().getDisplayValues();
+    if (!values || values.length === 0) return [];
+    const headers = values.shift();
+    return values.map(row => {
+      const item = { _raw: row };
+      headers.forEach((header, index) => {
+        if (header) item[header] = row[index];
+      });
+      return item;
+    });
+  };
+
+  const jobs = mapRows(jobSheet);
+  const tasks = mapRows(taskSheet);
+  const defects = mapRows(defectSheet);
+
+  const jobRow = jobs.find(job => job.JobID === jobId);
+  if (!jobRow) throw new Error('ไม่พบข้อมูลใบงานหลัก (Job)');
+
+  const requestedTaskIds = Array.isArray(taskIds)
+    ? taskIds.filter(Boolean)
+    : (taskIds ? [taskIds] : []);
+
+  const matchedTasks = tasks
+    .filter(task => task.JobID === jobId)
+    .filter(task => requestedTaskIds.length === 0 || requestedTaskIds.indexOf(task.TaskID) !== -1)
+    .map(task => ({
+      id: task.TaskID || '',
+      scope: task.Scope || '',
+      building: task.Building || '',
+      unit: task.Unit || '',
+      status: task.Status || 'รอดำเนินการ',
+      customerName: task.CustomerName || task._raw[6] || '',
+      targetFixDate: task.TargetFixDate || '',
+      actualStartDate: task.ActualStartDate || '',
+      actualEndDate: task.ActualEndDate || '',
+      duration: task.Duration || '',
+      remark: task.Remark || '',
+      defects: defects
+        .filter(defect => defect.TaskID === task.TaskID)
+        .map(defect => ({
+          id: defect.DefectID || defect['DefectID'] || '',
+          taskId: defect.TaskID || defect['TaskID'] || '',
+          targetStartDate: defect.TargetStartDate || defect['วันเข้าแก้ไข'] || defect['TargetStartDate'] || '',
+          targetEndDate: defect.TargetEndDate || defect['วันแก้ไขเสร็จสิ้น'] || defect['TargetEndDate'] || '',
+          status: defect.Status || defect['DefectStatus'] || defect['สถานะ defect'] || '',
+          mainCategory: defect.MainCategory || defect['ลักษณะงานหลัก'] || '',
+          subCategory: defect.SubCategory || defect['ลักษณะงานรอง'] || '',
+          description: defect.Description || defect['รายละเอียด'] || '',
+          major: defect.Major || defect['Major'] || '',
+          team: defect.Team || defect['ทีมเข้าแก้ไข'] || '',
+          imgUnit: defect.ImgUnit || defect['รูปภาพเลขยูนิต'] || '',
+          imgBefore: defect.ImgBefore || defect['รูปภาพก่อนแก้ไข'] || '',
+          imgDuring: defect.ImgDuring || defect['รูปภาพระหว่างแก้ไข'] || '',
+          imgAfter: defect.ImgAfter || defect['รูปภาพหลังแก้ไข'] || '',
+          timestamp: defect.Timestamp || defect['Timestamp'] || '',
+          voSteps: defect.VOSteps || defect['ขั้นตอนการแก้ไข'] || defect['VOSteps'] || '',
+          actualStartDate: defect.ActualStartDate || defect['ActualStartDate'] || '',
+          actualEndDate: defect.ActualEndDate || defect['ActualEndDate'] || '',
+          remark: defect.Remark || defect['หมายเหตุ'] || ''
+        }))
+    }));
+
+  return {
+    job: {
+      id: jobRow.JobID || '',
+      site: jobRow.Site || '',
+      owner: jobRow.Owner || '',
+      ownerCompany: jobRow.OwnerCompany || '',
+      staff: jobRow.Staff || '',
+      replyDueDate: jobRow.ReplyDueDate || '',
+      remark: jobRow.Remark || '',
+      status: jobRow.Status || ''
+    },
+    tasks: matchedTasks
+  };
+}
+
 function buildTaskPlanPdfHtml_(job, task) {
   const logoDataUrl = getPdfLogoDataUrl_();
-  const defects = (task.defects || []).filter(def => (def.status || 'รอดำเนินการ') === 'รอดำเนินการ');
-  const featuredDefect = defects[0] || null;
-  const featuredImage = featuredDefect ? (getPrintableImgUrlForPdf_(featuredDefect.imgBefore) || getPrintableImgUrlForPdf_(featuredDefect.imgUnit)) : '';
-  const featuredRepairDate = featuredDefect
-    ? (featuredDefect.actualStartDate || featuredDefect.targetStartDate || task.actualStartDate || task.targetFixDate || '')
-    : '';
-  const ownerName = escapeHtml_(job.owner || '-');
-  const staffName = escapeHtml_(job.staff || '-');
+  const defects = task.defects || [];
+  const detailItems = defects.length > 0 ? defects : [{}];
 
-  let html = `
+  const renderDetailCard = function(defect, index, compactMode) {
+    const beforeImage = getPrintableImgUrlForPdf_(defect.imgBefore || defect.imgUnit || '');
+    const majorValue = String(defect.major || 'ไม่ใช่').trim() || 'ไม่ใช่';
+    const repairDateValue = defect.targetStartDate || defect.actualStartDate || task.targetFixDate || '-';
+    const detailTitle = defect.id
+      ? `รายการ Defect ${index + 1} • ${escapeHtml_(defect.id)}`
+      : `รายการ Defect ${index + 1}`;
+
+    return `
+          <div class="detail-card ${compactMode ? 'detail-card-compact' : ''}">
+            <div class="detail-head">
+              <div class="detail-head-title">${detailTitle}</div>
+            </div>
+            <div class="detail-body">
+              <table class="detail-layout">
+                <tr>
+                  <td class="detail-image-col">
+                    <div class="image-panel ${compactMode ? 'image-panel-compact' : ''}">
+                      <div class="field-label">รูปภาพก่อนแก้ไข</div>
+                      ${beforeImage ? `<img src="${beforeImage}" />` : `<div class="no-image ${compactMode ? 'no-image-compact' : ''}"><span>ไม่มีรูปภาพก่อนแก้ไข</span></div>`}
+                    </div>
+                  </td>
+                  <td class="detail-info-col">
+                    <table class="detail-grid ${compactMode ? 'detail-grid-compact' : ''}">
+                      <tr>
+                        <td style="width: 50%;">
+                          <div class="field ${compactMode ? 'field-compact' : ''}">
+                            <div class="field-label">ลักษณะงานหลัก</div>
+                            <div class="field-value">${escapeHtml_(defect.mainCategory || '-')}</div>
+                          </div>
+                        </td>
+                        <td style="width: 50%;">
+                          <div class="field ${compactMode ? 'field-compact' : ''}">
+                            <div class="field-label">ลักษณะงานรอง</div>
+                            <div class="field-value">${escapeHtml_(defect.subCategory || '-')}</div>
+                          </div>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="width: 50%;">
+                          <div class="field ${compactMode ? 'field-compact' : ''}">
+                            <div class="field-label">Major</div>
+                            <div class="field-value"><span class="pill ${majorValue === 'ใช่' ? 'pill-major' : 'pill-normal'}">${escapeHtml_(majorValue)}</span></div>
+                          </div>
+                        </td>
+                        <td style="width: 50%;">
+                          <div class="field ${compactMode ? 'field-compact' : ''}">
+                            <div class="field-label">ทีมเข้าแก้ไข</div>
+                            <div class="field-value">${escapeHtml_(defect.team || '-')}</div>
+                          </div>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td colspan="2">
+                          <div class="field ${compactMode ? 'field-compact' : ''}">
+                            <div class="field-label">วันเข้าแก้ไข</div>
+                            <div class="field-value">${escapeHtml_(repairDateValue)}</div>
+                          </div>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td colspan="2">
+                          <div class="field field-tall ${compactMode ? 'field-tall-compact field-compact' : ''}">
+                            <div class="field-label">รายละเอียด</div>
+                            <div class="field-value">${escapeHtml_(defect.description || '-')}</div>
+                          </div>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </div>
+          </div>`;
+  };
+
+  const firstPageItems = detailItems.slice(0, 2);
+  const remainingItems = detailItems.slice(2);
+  const remainingPages = [];
+  for (let i = 0; i < remainingItems.length; i += 4) {
+    remainingPages.push(remainingItems.slice(i, i + 4));
+  }
+
+  const pageGroups = [firstPageItems.length ? firstPageItems : detailItems.slice(0, 1)].concat(remainingPages);
+  const lastPageIndex = pageGroups.length - 1;
+
+  const signatureHtml = `
+        <div class="signature-footer">
+          <table class="signature-table">
+            <tr>
+              <td style="width: 50%;">
+                <div class="signature-card">
+                  <div class="signature-title">Staff / ผู้รับผิดชอบ Signature</div>
+                  <div class="signature-line"></div>
+                  <div class="signature-name">( ${escapeHtml_(job.staff || '.........................................................')} )</div>
+                  <div class="signature-date">วันที่: ......../......../..............</div>
+                </div>
+              </td>
+              <td style="width: 50%;">
+                <div class="signature-card">
+                  <div class="signature-title">Owner / ผู้ดูแล Signature</div>
+                  <div class="signature-line"></div>
+                  <div class="signature-name">( ${escapeHtml_(job.owner || '.........................................................')} )</div>
+                  <div class="signature-date">วันที่: ......../......../..............</div>
+                </div>
+              </td>
+            </tr>
+          </table>
+        </div>`;
+
+  const pagesHtml = pageGroups.map(function(pageItems, pageIndex) {
+    const isFirstPage = pageIndex === 0;
+    const isLastPage = pageIndex === lastPageIndex;
+    const compactMode = !isFirstPage;
+    const sectionTitle = isFirstPage ? '<div class="section-title">Detail</div>' : '';
+    const detailsHtml = pageItems.map(function(defect, itemIndex) {
+      const absoluteIndex = isFirstPage ? itemIndex : (2 + (pageIndex - 1) * 4 + itemIndex);
+      return renderDetailCard(defect, absoluteIndex, compactMode);
+    }).join('');
+
+    return `
+      <div class="page ${isLastPage ? 'page-last' : ''}">
+        <div class="page-body">
+          ${isFirstPage ? `
+          <div class="hero">
+            <div class="hero-inner">
+              <table class="hero-grid">
+                <tr>
+                  <td class="brand">
+                    <div class="brand-badge"><img src="${logoDataUrl}" /></div>
+                  </td>
+                  <td>
+                    <div class="hero-title-wrap">
+                      <div class="hero-title">Repair Planning Document</div>
+                      <div class="hero-subtitle">เอกสารแผนงานสำหรับการติดตามและแก้ไข Defect ของใบงานย่อย</div>
+                    </div>
+                  </td>
+                  <td class="hero-ids">
+                    <div class="hero-id-box">
+                      <div class="hero-value">${escapeHtml_(job.id || '-')}</div>
+                    </div>
+                    <div class="hero-id-box" style="margin-bottom: 0;">
+                      <div class="hero-value">${escapeHtml_(task.id || '-')}</div>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </div>
+          </div>
+          <div class="info-card">
+            <div class="info-head">Information</div>
+            <table class="info-table">
+              <tr>
+                <th>ชื่อลูกค้า</th><td>${escapeHtml_(task.customerName || '-')}</td>
+                <th>Owner / ผู้ดูแล</th><td>${escapeHtml_(job.owner || '-')}</td>
+              </tr>
+              <tr>
+                <th>Staff / ผู้รับผิดชอบ</th><td>${escapeHtml_(job.staff || '-')}</td>
+                <th>Site</th><td>${escapeHtml_(job.site || '-')}</td>
+              </tr>
+              <tr>
+                <th>Building</th><td>${escapeHtml_(task.building || '-')}</td>
+                <th>Unit</th><td>${escapeHtml_(task.unit || '-')}</td>
+              </tr>
+            </table>
+          </div>` : ''}
+          <div class="details-section ${compactMode ? 'details-section-compact' : ''}">
+            ${sectionTitle}
+            ${detailsHtml}
+          </div>
+        </div>
+        ${isLastPage ? signatureHtml : ''}
+      </div>`;
+  }).join('');
+
+  return `
   <!DOCTYPE html>
   <html>
     <head>
@@ -901,217 +1157,94 @@ function buildTaskPlanPdfHtml_(job, task) {
       <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
       <style>
         * { box-sizing: border-box; }
-        @page { size: A4; margin: 12mm; }
-        body { font-family: 'Sarabun', sans-serif; color: #111111; line-height: 1.45; font-size: 11px; margin: 0; padding: 0; background: #ffffff; }
-        .sheet { width: 100%; min-height: 272mm; padding: 12mm 12mm 10mm; display: flex; flex-direction: column; }
-        .hero { padding: 0 0 8mm; color: #111111; }
+        @page { size: A4 portrait; margin: 12mm; }
+        html, body { margin: 0; padding: 0; }
+        body { font-family: 'Sarabun', sans-serif; color: #0f172a; line-height: 1.35; font-size: 11px; background: #ffffff; }
+        .sheet { width: 100%; }
+        .page { min-height: 272mm; display: flex; flex-direction: column; justify-content: space-between; page-break-after: always; }
+        .page-last { page-break-after: auto; }
+        .page-body { flex: 1; }
+        .hero { border: 1px solid #dbe4ea; border-radius: 18px; overflow: hidden; margin-bottom: 10px; page-break-inside: avoid; }
+        .hero-inner { padding: 14px 18px; background: linear-gradient(180deg, #f8fcfb 0%, #ffffff 100%); }
         .hero-grid { width: 100%; border-collapse: collapse; }
         .hero-grid td { vertical-align: top; }
-        .brand { width: 90px; }
-        .brand-badge { width: 60px; height: 38px; text-align: left; }
-        .brand-badge img { width: 40px; height: 40px; object-fit: contain; }
-        .hero-main { text-align: center; padding-top: 2px; }
-        .hero-title { font-size: 18px; font-weight: 500; letter-spacing: 0; margin: 0; }
-        .hero-subtitle { font-size: 10px; margin-top: 2px; }
-        .hero-ids { width: 115px; text-align: right; }
-        .hero-label { font-size: 9px; color: #555555; }
-        .hero-value { font-size: 11px; font-weight: 500; margin-top: 2px; min-height: 16px; }
-        .body { flex: 1; display: flex; flex-direction: column; }
-        .section-title { font-size: 12px; font-weight: 700; color: #111111; margin: 0 0 4mm; text-transform: uppercase; }
-        .info-table { width: 100%; border-collapse: collapse; margin-bottom: 6mm; }
-        .info-table td { padding: 2.2mm 0; vertical-align: top; font-size: 10px; }
-        .info-label { width: 16%; font-weight: 400; white-space: nowrap; }
-        .info-value { width: 34%; font-weight: 400; padding-left: 2mm; }
-        .detail-card { page-break-inside: avoid; }
-        .detail-shell { width: 100%; border-collapse: collapse; table-layout: fixed; }
-        .detail-shell td { vertical-align: top; }
-        .detail-visual { width: 40%; padding-right: 8mm; }
-        .detail-meta { width: 60%; }
-        .image-box { border: 1px solid #222222; height: 92mm; padding: 6mm; background: #ffffff; text-align: center; display: flex; align-items: center; justify-content: center; }
-        .image-box img { max-width: 100%; max-height: 78mm; object-fit: contain; }
-        .no-image { width: 100%; height: 78mm; color: #444444; font-size: 12px; display: flex; align-items: center; justify-content: center; }
-        .detail-caption { margin-top: 4mm; text-align: center; font-size: 10px; }
-        .meta-line { margin-bottom: 8mm; }
-        .meta-inline { font-size: 10px; font-weight: 600; }
-        .meta-title { font-size: 11px; font-weight: 700; margin: 0 0 2mm; }
-        .meta-body { font-size: 10px; min-height: 18mm; white-space: pre-wrap; word-break: break-word; }
-        .meta-small { font-size: 10px; font-weight: 600; min-height: 8mm; }
-        .signature-wrap { margin-top: auto; padding-top: 18mm; page-break-inside: avoid; }
-        .signature-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-        .signature-table td { width: 50%; vertical-align: bottom; }
-        .signature-table td:last-child { padding-left: 18mm; }
-        .signature-block { min-height: 34mm; }
-        .signature-title { font-size: 11px; font-weight: 400; text-transform: uppercase; margin-bottom: 17mm; }
-        .signature-line { border-bottom: 1px solid #111111; height: 1px; }
-        .signature-name { font-size: 10px; margin-top: 4mm; }
-        .signature-date { font-size: 10px; margin-top: 1.5mm; }
+        .brand { width: 68px; }
+        .brand-badge { width: 52px; height: 52px; border-radius: 14px; background: #eef8f6; border: 1px solid #cfe7e3; text-align: center; }
+        .brand-badge img { width: 34px; height: 34px; margin-top: 8px; }
+        .hero-title-wrap { padding-left: 6px; }
+        .hero-title { font-size: 18px; font-weight: 700; color: #0D504C; margin: 0; }
+        .hero-subtitle { font-size: 10px; color: #64748b; margin-top: 4px; }
+        .hero-ids { width: 168px; text-align: right; }
+        .hero-id-box { display: block; min-width: 140px; background: #ffffff; border: 1px solid #dbe4ea; border-radius: 12px; padding: 9px 10px; margin-bottom: 4px; text-align: left; }
+        .hero-value { font-size: 13px; font-weight: 700; color: #1f2937; word-break: break-word; line-height: 1.15; }
+        .info-card { border: 1px solid #dbe4ea; border-radius: 16px; overflow: hidden; margin-bottom: 10px; page-break-inside: avoid; }
+        .info-head { padding: 9px 14px; background: linear-gradient(90deg, #0D504C 0%, #12726c 100%); color: #ffffff; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+        .info-table { width: 100%; border-collapse: collapse; }
+        .info-table th, .info-table td { border-bottom: 1px solid #e8eef2; padding: 8px 10px; text-align: left; vertical-align: top; }
+        .info-table tr:last-child th, .info-table tr:last-child td { border-bottom: none; }
+        .info-table th { width: 22%; background: #f7fafb; color: #4b5563; font-size: 9px; text-transform: uppercase; letter-spacing: 0.08em; }
+        .info-table td { width: 28%; color: #111827; font-size: 11px; font-weight: 600; }
+        .section-title { font-size: 12px; font-weight: 700; color: #0D504C; margin: 0 0 8px; text-transform: uppercase; letter-spacing: 0.05em; }
+        .details-section { margin-top: 4px; }
+        .details-section-compact { margin-top: 0; }
+        .detail-card { border: 1px solid #dbe4ea; border-radius: 14px; overflow: hidden; margin-bottom: 8px; page-break-inside: avoid; }
+        .detail-card-compact { margin-bottom: 6px; }
+        .detail-head { padding: 8px 12px 2px; background: #ffffff; border-bottom: none; }
+        .detail-head-title { font-size: 11px; font-weight: 700; color: #0f172a; }
+        .detail-body { padding: 0 8px 8px; }
+        .detail-layout { width: 100%; border-collapse: collapse; }
+        .detail-layout td { vertical-align: top; }
+        .detail-image-col { width: 37%; padding-right: 8px; }
+        .detail-info-col { width: 63%; }
+        .image-panel { border: 1px solid #dbe4ea; border-radius: 10px; background: #ffffff; padding: 6px; min-height: 188px; text-align: center; }
+        .image-panel img { max-width: 100%; width: 100%; max-height: 168px; object-fit: contain; border-radius: 8px; }
+        .image-panel-compact { min-height: 126px; }
+        .image-panel-compact img { max-height: 110px; }
+        .no-image { min-height: 164px; border: 1px dashed #dbe4ea; border-radius: 10px; color: #94a3b8; font-size: 10px; display: table; width: 100%; }
+        .no-image-compact { min-height: 104px; }
+        .no-image span { display: table-cell; vertical-align: middle; }
+        .detail-grid { width: 100%; border-collapse: separate; border-spacing: 6px 6px; margin-top: -22px; }
+        .detail-grid-compact { border-spacing: 4px 4px; margin-top: -20px; }
+        .field { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 6px 7px; min-height: 38px; }
+        .field-compact { padding: 4px 5px; min-height: 30px; }
+        .field-tall { min-height: 64px; }
+        .field-tall-compact { min-height: 40px; }
+        .field-label { font-size: 8px; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b; font-weight: 700; margin-bottom: 3px; }
+        .field-value { color: #0f172a; font-size: 9px; font-weight: 600; white-space: pre-wrap; word-break: break-word; }
+        .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 9px; font-weight: 700; }
+        .pill-major { background: #fff1f2; color: #be123c; border: 1px solid #fecdd3; }
+        .pill-normal { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+        .signature-footer { margin-top: 8px; padding-top: 6px; }
+        .signature-table { width: 100%; border-collapse: separate; border-spacing: 10px 0; }
+        .signature-card { border: 1px solid #dbe4ea; border-radius: 12px; padding: 9px 10px; height: 82px; background: #ffffff; }
+        .signature-title { font-size: 10px; font-weight: 700; color: #0D504C; text-transform: uppercase; letter-spacing: 0.08em; }
+        .signature-line { border-bottom: 1px dashed #94a3b8; margin: 24px 0 5px; }
+        .signature-name { font-size: 10px; font-weight: 600; color: #0f172a; }
+        .signature-date { font-size: 9px; color: #64748b; margin-top: 3px; }
       </style>
     </head>
     <body>
       <div class="sheet">
-        <div class="hero">
-          <table class="hero-grid">
-            <tr>
-              <td class="brand">
-                <div class="brand-badge"><img src="${logoDataUrl}" /></div>
-              </td>
-              <td class="hero-main">
-                <div class="hero-title">Repair Planning Document</div>
-                <div class="hero-subtitle">เอกสารแผนเข้าแก้ไข</div>
-              </td>
-              <td class="hero-ids">
-                <div class="hero-label">Job ID:</div>
-                <div class="hero-value">${escapeHtml_(job.id)}</div>
-                <div class="hero-label" style="margin-top: 4px;">Task ID:</div>
-                <div class="hero-value">${escapeHtml_(task.id)}</div>
-              </td>
-            </tr>
-          </table>
-        </div>
-        <div class="body">
-          <div class="section-title">Information</div>
-          <table class="info-table">
-            <tr>
-              <td class="info-label">ชื่อลูกค้า :</td><td class="info-value">${escapeHtml_(task.customerName || '-')}</td>
-              <td class="info-label">SITE :</td><td class="info-value">${escapeHtml_(job.site || '-')}</td>
-            </tr>
-            <tr>
-              <td class="info-label">Owner / ผู้ดูแล :</td><td class="info-value">${ownerName}</td>
-              <td class="info-label">Building - Unit :</td><td class="info-value">${escapeHtml_(`${task.building || '-'} - ${task.unit || '-'}`)}</td>
-            </tr>
-            <tr>
-              <td class="info-label">Staff/ผู้รับผิดชอบ :</td><td class="info-value">${staffName}</td>
-              <td class="info-label"></td><td class="info-value"></td>
-            </tr>
-          </table>
-          <div class="section-title">Detail</div>
-  `;
-
-  if (featuredDefect) {
-    html += `
-          <div class="detail-card">
-            <table class="detail-shell">
-              <tr>
-                <td class="detail-visual">
-                  <div class="image-box">
-                    ${featuredImage ? `<img src="${featuredImage}" />` : `<div class="no-image">รูปภาพก่อนแก้ไข</div>`}
-                  </div>
-                  <div class="detail-caption">รูปภาพก่อนแก้ไข</div>
-                </td>
-                <td class="detail-meta">
-                  <div class="meta-line">
-                    <div class="meta-inline">ลักษณะงานหลัก - ลักษณะงานรอง</div>
-                    <div class="meta-body">${escapeHtml_(`${featuredDefect.mainCategory || '-'} - ${featuredDefect.subCategory || '-'}`)}</div>
-                  </div>
-                  <div class="meta-line">
-                    <div class="meta-title">รายละเอียด Defect</div>
-                    <div class="meta-body">${escapeHtml_(featuredDefect.description || '-')}</div>
-                  </div>
-                  <div class="meta-line">
-                    <div class="meta-title">ทีมที่เข้าแก้</div>
-                    <div class="meta-small">${escapeHtml_(featuredDefect.team || '-')}</div>
-                  </div>
-                  <div class="meta-line">
-                    <div class="meta-title">กำหนดวันที่เข้าแก้ไข</div>
-                    <div class="meta-small">${escapeHtml_(featuredRepairDate || 'ยังไม่ได้ระบุ')}</div>
-                  </div>
-                  <div class="meta-line" style="margin-bottom: 0;">
-                    <div class="meta-title">Major</div>
-                    <div class="meta-small">${escapeHtml_(featuredDefect.major || 'ไม่ใช่')}</div>
-                  </div>
-                </td>
-              </tr>
-            </table>
-          </div>
-    `;
-  } else {
-    html += `
-          <div class="detail-card">
-            <table class="detail-shell">
-              <tr>
-                <td class="detail-visual">
-                  <div class="image-box"><div class="no-image">รูปภาพก่อนแก้ไข</div></div>
-                  <div class="detail-caption">รูปภาพก่อนแก้ไข</div>
-                </td>
-                <td class="detail-meta">
-                  <div class="meta-line">
-                    <div class="meta-inline">ลักษณะงานหลัก - ลักษณะงานรอง</div>
-                    <div class="meta-body">-</div>
-                  </div>
-                  <div class="meta-line">
-                    <div class="meta-title">รายละเอียด Defect</div>
-                    <div class="meta-body">ไม่มีรายการ Defect สถานะรอดำเนินการในใบงานย่อยนี้</div>
-                  </div>
-                  <div class="meta-line">
-                    <div class="meta-title">ทีมที่เข้าแก้</div>
-                    <div class="meta-small">-</div>
-                  </div>
-                  <div class="meta-line">
-                    <div class="meta-title">กำหนดวันที่เข้าแก้ไข</div>
-                    <div class="meta-small">-</div>
-                  </div>
-                  <div class="meta-line" style="margin-bottom: 0;">
-                    <div class="meta-title">Major</div>
-                    <div class="meta-small">-</div>
-                  </div>
-                </td>
-              </tr>
-            </table>
-          </div>
-    `;
-  }
-
-  html += `
-          <div class="signature-wrap">
-            <table class="signature-table">
-              <tr>
-                <td>
-                  <div class="signature-block">
-                    <div class="signature-title">Staff Signature</div>
-                    <div class="signature-line"></div>
-                    <div class="signature-name">( ${staffName} )</div>
-                    <div class="signature-date">วันที่: ......../......../..............</div>
-                  </div>
-                </td>
-                <td>
-                  <div class="signature-block">
-                    <div class="signature-title">Owner Signature</div>
-                    <div class="signature-line"></div>
-                    <div class="signature-name">( ${ownerName} )</div>
-                    <div class="signature-date">วันที่: ......../......../..............</div>
-                  </div>
-                </td>
-              </tr>
-            </table>
-          </div>
-        </div>
+${pagesHtml}
       </div>
     </body>
   </html>`;
 
-  return html;
 }
 
 function exportTaskPlansToPDF(jobId, taskId) {
-  const allDataStr = getAllData();
-  const allJobs = JSON.parse(allDataStr);
-  const job = allJobs.find(j => j.id === jobId);
-
-  if (!job) throw new Error('ไม่พบข้อมูลใบงานหลัก (Job)');
-  if (!job.tasks || job.tasks.length === 0) throw new Error('ไม่มีใบงานย่อยให้ Export');
-
-  const pendingTasks = job.tasks.filter(task => (task.status || 'รอดำเนินการ') === 'รอดำเนินการ');
-  if (pendingTasks.length === 0) throw new Error('ไม่มีใบงานย่อยสถานะรอดำเนินการสำหรับ Export');
-
   const requestedTaskIds = Array.isArray(taskId)
     ? taskId.filter(Boolean)
     : (taskId ? [taskId] : []);
 
-  const selectedTasks = requestedTaskIds.length > 0
-    ? pendingTasks.filter(task => requestedTaskIds.indexOf(task.id) !== -1)
-    : pendingTasks;
+  const exportData = getTaskPlanExportData_(jobId, requestedTaskIds);
+  const job = exportData.job;
+  const selectedTasks = exportData.tasks;
 
-  if (selectedTasks.length === 0) throw new Error('ไม่พบใบงานย่อยที่เลือก หรือใบงานนั้นไม่ได้อยู่ในสถานะรอดำเนินการ');
+  if (!selectedTasks || selectedTasks.length === 0) throw new Error('ไม่พบใบงานย่อยที่เลือกสำหรับ Export');
+
+  const missingRequestedTasks = requestedTaskIds.filter(taskIdItem => !selectedTasks.some(task => task.id === taskIdItem));
+  if (missingRequestedTasks.length > 0) throw new Error('ไม่พบบางใบงานย่อยที่เลือกสำหรับ Export');
 
   const folder = DriveApp.getFolderById(IMAGE_FOLDER_ID);
   const exportedFiles = [];
@@ -1130,12 +1263,11 @@ function exportTaskPlansToPDF(jobId, taskId) {
 function exportDefectReportToPDF(taskId) {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const allDataStr = getAllData();
-  
   const allJobs = JSON.parse(allDataStr);
-  
+
   let targetTask = null;
   let targetJob = null;
-  
+
   for (const job of allJobs) {
     const foundTask = job.tasks.find(t => t.id === taskId);
     if (foundTask) {
@@ -1145,23 +1277,24 @@ function exportDefectReportToPDF(taskId) {
     }
   }
 
-  if (!targetTask) throw new Error("ไม่พบข้อมูลใบงานย่อย (Task)");
+  if (!targetTask) throw new Error('ไม่พบข้อมูลใบงานย่อย (Task)');
 
   const folder = DriveApp.getFolderById(IMAGE_FOLDER_ID);
-  
+  const logoDataUrl = getPdfLogoDataUrl_();
+
   const getPrintableImgUrl = (url) => {
     if (!url) return '';
-    if (url.startsWith('data:image')) return url;
-    const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/) || url.match(/id=([a-zA-Z0-9_-]+)/);
+    if (String(url).startsWith('data:image')) return url;
+    const match = String(url).match(/\/d\/([a-zA-Z0-9_-]+)/) || String(url).match(/id=([a-zA-Z0-9_-]+)/);
     if (match && match[1]) {
       try {
         const file = DriveApp.getFileById(match[1]);
         const blob = file.getBlob();
         const base64 = Utilities.base64Encode(blob.getBytes());
-        const mimeType = blob.getContentType();
+        const mimeType = blob.getContentType() || 'image/jpeg';
         return `data:${mimeType};base64,${base64}`;
       } catch (e) {
-        return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w500`;
+        return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w1000`;
       }
     }
     return url;
@@ -1174,147 +1307,212 @@ function exportDefectReportToPDF(taskId) {
         <meta charset="UTF-8">
         <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
         <style>
-          body { font-family: 'Sarabun', sans-serif; color: #1e293b; line-height: 1.6; font-size: 14px; margin: 0; padding: 10px; }
-          .header-title { text-align: center; color: #0f172a; margin-bottom: 25px; font-size: 24px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
-          table.header-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-          table.header-table th, table.header-table td { border: 1px solid #cbd5e1; padding: 10px 12px; text-align: left; vertical-align: top; }
-          table.header-table th { background-color: #f1f5f9; width: 18%; font-weight: 600; color: #334155; }
-          table.header-table td { width: 32%; color: #0f172a; }
-          .section-title { font-size: 18px; font-weight: 600; color: #1e40af; border-bottom: 2px solid #93c5fd; padding-bottom: 8px; margin-bottom: 15px; }
-          
-          .defect-card { border: 1px solid #e2e8f0; margin-bottom: 25px; padding: 15px; page-break-inside: avoid; border-radius: 8px; background-color: #ffffff; }
-          .defect-info { margin-bottom: 15px; padding: 12px; background-color: #f8fafc; border-radius: 6px; border-left: 4px solid #3b82f6; }
-          .defect-info strong { color: #0f172a; }
-          
-          .img-grid { display: table; width: 100%; table-layout: fixed; margin-top: 15px; }
-          .img-cell { display: table-cell; width: 25%; padding: 0 5px; text-align: center; vertical-align: top; }
-          .img-cell img { width: 100%; max-height: 180px; object-fit: contain; border: 1px solid #cbd5e1; border-radius: 6px; padding: 2px; }
-          .img-label { font-size: 13px; font-weight: 700; margin-bottom: 8px; color: #1e40af; background-color: #eff6ff; padding: 4px 0; border-radius: 4px; }
-          .no-img { height: 120px; background: #f8fafc; border: 2px dashed #cbd5e1; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 12px; margin-top: 5px; }
-
-          .signature-container {
-              width: 100%;
-              margin-top: 50px;
-              page-break-inside: avoid;
-          }
-          .signature-table {
-              width: 100%;
-              border-collapse: collapse;
-              text-align: center;
-          }
-          .signature-table td {
-              width: 50%;
-              padding: 10px 20px;
-              vertical-align: bottom;
-          }
-          .sign-line {
-              border-bottom: 1px dashed #94a3b8;
-              width: 70%;
-              margin: 40px auto 10px auto;
-          }
-          .sign-text {
-              color: #334155;
-              font-size: 14px;
-              line-height: 1.5;
-          }
-          .sign-name {
-              font-weight: 600;
-              color: #0f172a;
-          }
+          * { box-sizing: border-box; }
+          @page { size: A4 portrait; margin: 12mm; }
+          html, body { margin: 0; padding: 0; }
+          body { font-family: 'Sarabun', sans-serif; color: #0f172a; line-height: 1.4; font-size: 11px; background: #ffffff; }
+          .sheet { width: 100%; }
+          .hero { border: 1px solid #dbe4ea; border-radius: 18px; overflow: hidden; margin-bottom: 10px; page-break-inside: avoid; }
+          .hero-inner { padding: 14px 18px; background: linear-gradient(180deg, #f8fcfb 0%, #ffffff 100%); }
+          .hero-grid { width: 100%; border-collapse: collapse; }
+          .hero-grid td { vertical-align: top; }
+          .brand { width: 68px; }
+          .brand-badge { width: 52px; height: 52px; border-radius: 14px; background: #eef8f6; border: 1px solid #cfe7e3; text-align: center; }
+          .brand-badge img { width: 34px; height: 34px; margin-top: 8px; }
+          .hero-title-wrap { padding-left: 6px; }
+          .hero-title { font-size: 18px; font-weight: 700; color: #0D504C; margin: 0; }
+          .hero-subtitle { font-size: 10px; color: #64748b; margin-top: 4px; }
+          .hero-ids { width: 168px; text-align: right; }
+          .hero-id-box { display: block; min-width: 140px; background: #ffffff; border: 1px solid #dbe4ea; border-radius: 12px; padding: 9px 10px; margin-bottom: 4px; text-align: left; }
+          .hero-value { font-size: 13px; font-weight: 700; color: #1f2937; word-break: break-word; line-height: 1.15; }
+          .info-card { border: 1px solid #dbe4ea; border-radius: 16px; overflow: hidden; margin-bottom: 10px; page-break-inside: avoid; }
+          .info-head { padding: 9px 14px; background: linear-gradient(90deg, #0D504C 0%, #12726c 100%); color: #ffffff; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+          .info-table { width: 100%; border-collapse: collapse; }
+          .info-table th, .info-table td { border-bottom: 1px solid #e8eef2; padding: 8px 10px; text-align: left; vertical-align: top; }
+          .info-table tr:last-child th, .info-table tr:last-child td { border-bottom: none; }
+          .info-table th { width: 22%; background: #f7fafb; color: #4b5563; font-size: 9px; text-transform: uppercase; letter-spacing: 0.08em; }
+          .info-table td { width: 28%; color: #111827; font-size: 11px; font-weight: 600; }
+          .section-title { font-size: 12px; font-weight: 700; color: #0D504C; margin: 0 0 8px; text-transform: uppercase; letter-spacing: 0.05em; }
+          .defect-card { border: 1px solid #dbe4ea; border-radius: 14px; overflow: hidden; margin-bottom: 10px; page-break-inside: avoid; background: #ffffff; }
+          .defect-head { padding: 8px 12px 2px; }
+          .defect-head-title { font-size: 11px; font-weight: 700; color: #0f172a; }
+          .defect-body { padding: 0 8px 10px; }
+          .defect-meta { width: 100%; border-collapse: separate; border-spacing: 6px 6px; margin-top: -6px; }
+          .field { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 7px 8px; min-height: 38px; }
+          .field-tall { min-height: 58px; }
+          .field-label { font-size: 8px; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b; font-weight: 700; margin-bottom: 3px; }
+          .field-value { color: #0f172a; font-size: 10px; font-weight: 600; white-space: pre-wrap; word-break: break-word; }
+          .img-grid { width: 100%; border-collapse: separate; border-spacing: 8px 8px; margin-top: 6px; table-layout: fixed; }
+          .img-cell { width: 50%; vertical-align: top; }
+          .img-card { border: 1px solid #dbe4ea; border-radius: 12px; background: #ffffff; padding: 8px; }
+          .img-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b; font-weight: 700; margin-bottom: 6px; }
+          .img-frame { border: 1px solid #dbe4ea; border-radius: 10px; background: #f8fafc; min-height: 180px; text-align: center; overflow: hidden; }
+          .img-frame img { width: 100%; max-height: 178px; object-fit: contain; display: block; }
+          .no-img { min-height: 178px; color: #94a3b8; font-size: 10px; display: table; width: 100%; }
+          .no-img span { display: table-cell; vertical-align: middle; }
+          .signature-container { margin-top: 14px; page-break-inside: avoid; }
+          .signature-table { width: 100%; border-collapse: separate; border-spacing: 10px 0; }
+          .signature-table td { width: 50%; vertical-align: top; }
+          .signature-card { border: 1px solid #dbe4ea; border-radius: 12px; padding: 9px 10px; height: 82px; background: #ffffff; }
+          .signature-title { font-size: 10px; font-weight: 700; color: #0D504C; text-transform: uppercase; letter-spacing: 0.08em; }
+          .signature-line { border-bottom: 1px dashed #94a3b8; margin: 24px 0 5px; }
+          .signature-name { font-size: 10px; font-weight: 600; color: #0f172a; }
+          .signature-date { font-size: 9px; color: #64748b; margin-top: 3px; }
         </style>
       </head>
       <body>
-        <div class="header-title">เอกสารแก้ไข Defect</div>
-        <table class="header-table">
-          <tr>
-            <th>Job ID</th><td>${targetJob.id}</td>
-            <th>Task ID</th><td>${targetTask.id}</td>
-          </tr>
-          <tr>
-            <th>Site</th><td>${targetJob.site}</td>
-            <th>Scope</th><td>${targetTask.scope}</td>
-          </tr>
-          <tr>
-            <th>Owner / ผู้ดูแล</th><td>${targetJob.owner}</td>
-            <th>Building / Unit</th><td>${targetTask.building} - ${targetTask.unit}</td>
-          </tr>
-          <tr>
-            <th>Company</th><td>${targetJob.ownerCompany || '-'}</td>
-            <th>ชื่อลูกค้า</th><td>${targetTask.customerName || '-'}</td>
-          </tr>
-          <tr>
-            <th>Staff / ผู้จัดทำ</th><td colspan="3">${targetJob.staff || '-'}</td>
-          </tr>
-        </table>
-
-        <div class="section-title">รายละเอียดผลการแก้ไข Defect</div>
-  `;
+        <div class="sheet">
+          <div class="hero">
+            <div class="hero-inner">
+              <table class="hero-grid">
+                <tr>
+                  <td class="brand">
+                    <div class="brand-badge"><img src="${logoDataUrl}" /></div>
+                  </td>
+                  <td>
+                    <div class="hero-title-wrap">
+                      <div class="hero-title">Defect Repair Report</div>
+                      <div class="hero-subtitle">เอกสารสรุปรายละเอียดและรูปภาพการแก้ไข Defect ของใบงานย่อย</div>
+                    </div>
+                  </td>
+                  <td class="hero-ids">
+                    <div class="hero-id-box">
+                      <div class="hero-value">${escapeHtml_(targetJob.id || '-')}</div>
+                    </div>
+                    <div class="hero-id-box" style="margin-bottom: 0;">
+                      <div class="hero-value">${escapeHtml_(targetTask.id || '-')}</div>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </div>
+          </div>
+          <div class="info-card">
+            <div class="info-head">Information</div>
+            <table class="info-table">
+              <tr>
+                <th>ชื่อลูกค้า</th><td>${escapeHtml_(targetTask.customerName || '-')}</td>
+                <th>Owner / ผู้ดูแล</th><td>${escapeHtml_(targetJob.owner || '-')}</td>
+              </tr>
+              <tr>
+                <th>Staff / ผู้รับผิดชอบ</th><td>${escapeHtml_(targetJob.staff || '-')}</td>
+                <th>Site</th><td>${escapeHtml_(targetJob.site || '-')}</td>
+              </tr>
+              <tr>
+                <th>Building</th><td>${escapeHtml_(targetTask.building || '-')}</td>
+                <th>Unit</th><td>${escapeHtml_(targetTask.unit || '-')}</td>
+              </tr>
+            </table>
+          </div>
+          <div class="section-title">Detail</div>`;
 
   if (targetTask.defects && targetTask.defects.length > 0) {
-    targetTask.defects.forEach((def) => {
-      let imgUnit = getPrintableImgUrl(def.imgUnit);
-      let imgBefore = getPrintableImgUrl(def.imgBefore);
-      let imgDuring = getPrintableImgUrl(def.imgDuring);
-      let imgAfter = getPrintableImgUrl(def.imgAfter);
+    targetTask.defects.forEach((def, index) => {
+      const imgUnit = getPrintableImgUrl(def.imgUnit);
+      const imgBefore = getPrintableImgUrl(def.imgBefore);
+      const imgDuring = getPrintableImgUrl(def.imgDuring);
+      const imgAfter = getPrintableImgUrl(def.imgAfter);
+      const defectTitle = def.id
+        ? `รายการ Defect ${index + 1} • ${escapeHtml_(def.id)}`
+        : `รายการ Defect ${index + 1}`;
 
       const renderImg = (src, label) => `
-        <div class="img-cell">
-          <div class="img-label">${label}</div>
-          ${src ? `<img src="${src}" />` : `<div class="no-img">ไม่มีรูปภาพ</div>`}
-        </div>
-      `;
+        <td class="img-cell">
+          <div class="img-card">
+            <div class="img-label">${label}</div>
+            <div class="img-frame">
+              ${src ? `<img src="${src}" />` : `<div class="no-img"><span>ไม่มีรูปภาพ</span></div>`}
+            </div>
+          </div>
+        </td>`;
 
       html += `
-      <div class="defect-card">
-        <div class="defect-info">
-          <div style="margin-bottom: 6px;">
-            <strong>สถานะ:</strong> <span style="color: #047857; font-weight: 600;">${def.status}</span> &nbsp;|&nbsp; 
-            <strong>ลักษณะงานหลัก:</strong> ${def.mainCategory} &nbsp;|&nbsp; 
-            <strong>ลักษณะงานรอง:</strong> ${def.subCategory}
-          </div>
-          <div style="margin-bottom: 6px;">
-            <strong>ทีมเข้าแก้ไข:</strong> ${def.team}
-          </div>
-          <div>
-            <strong>รายละเอียด:</strong> ${def.description}
-          </div>
-        </div>
-        
-        <div class="img-grid">
-          ${renderImg(imgUnit, '1. รูปภาพเลขยูนิต')}
-          ${renderImg(imgBefore, '2. รูปภาพก่อนแก้ไข')}
-          ${renderImg(imgDuring, '3. รูปภาพระหว่างแก้ไข')}
-          ${renderImg(imgAfter, '4. รูปภาพหลังแก้ไข')}
-        </div>
-      </div>
-      `;
+          <div class="defect-card">
+            <div class="defect-head">
+              <div class="defect-head-title">${defectTitle}</div>
+            </div>
+            <div class="defect-body">
+              <table class="defect-meta">
+                <tr>
+                  <td style="width: 33.33%;">
+                    <div class="field">
+                      <div class="field-label">สถานะ</div>
+                      <div class="field-value">${escapeHtml_(def.status || '-')}</div>
+                    </div>
+                  </td>
+                  <td style="width: 33.33%;">
+                    <div class="field">
+                      <div class="field-label">ลักษณะงานหลัก</div>
+                      <div class="field-value">${escapeHtml_(def.mainCategory || '-')}</div>
+                    </div>
+                  </td>
+                  <td style="width: 33.33%;">
+                    <div class="field">
+                      <div class="field-label">ลักษณะงานรอง</div>
+                      <div class="field-value">${escapeHtml_(def.subCategory || '-')}</div>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td colspan="3">
+                    <div class="field">
+                      <div class="field-label">ทีมเข้าแก้ไข</div>
+                      <div class="field-value">${escapeHtml_(def.team || '-')}</div>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td colspan="3">
+                    <div class="field field-tall">
+                      <div class="field-label">รายละเอียด</div>
+                      <div class="field-value">${escapeHtml_(def.description || '-')}</div>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+              <table class="img-grid">
+                <tr>
+                  ${renderImg(imgUnit, 'รูปภาพเลขยูนิต')}
+                  ${renderImg(imgBefore, 'รูปภาพก่อนแก้ไข')}
+                </tr>
+                <tr>
+                  ${renderImg(imgDuring, 'รูปภาพระหว่างแก้ไข')}
+                  ${renderImg(imgAfter, 'รูปภาพหลังแก้ไข')}
+                </tr>
+              </table>
+            </div>
+          </div>`;
     });
   } else {
     html += `<p style="text-align:center; color:#94a3b8; padding: 30px 0; font-style: italic;">- ไม่มีรายการ Defect ในใบงานย่อยนี้ -</p>`;
   }
 
   html += `
-        <div class="signature-container">
+          <div class="signature-container">
             <table class="signature-table">
-                <tr>
-                    <td>
-                        <div class="sign-line"></div>
-                        <div class="sign-text sign-name">( ${targetJob.owner || '.........................................................'} )</div>
-                        <div class="sign-text">ผู้อนุมัติ (Owner)</div>
-                        <div class="sign-text" style="margin-top: 5px;">วันที่: ......../......../..............</div>
-                    </td>
-                    <td>
-                        <div class="sign-line"></div>
-                        <div class="sign-text sign-name">( ${targetTask.customerName || '.........................................................'} )</div>
-                        <div class="sign-text">ลูกค้า (Customer)</div>
-                        <div class="sign-text" style="margin-top: 5px;">วันที่: ......../......../..............</div>
-                    </td>
-                </tr>
+              <tr>
+                <td>
+                  <div class="signature-card">
+                    <div class="signature-title">Owner / ผู้อนุมัติ Signature</div>
+                    <div class="signature-line"></div>
+                    <div class="signature-name">( ${escapeHtml_(targetJob.owner || '.........................................................')} )</div>
+                    <div class="signature-date">วันที่: ......../......../..............</div>
+                  </div>
+                </td>
+                <td>
+                  <div class="signature-card">
+                    <div class="signature-title">Customer / ลูกค้า Signature</div>
+                    <div class="signature-line"></div>
+                    <div class="signature-name">( ${escapeHtml_(targetTask.customerName || '.........................................................')} )</div>
+                    <div class="signature-date">วันที่: ......../......../..............</div>
+                  </div>
+                </td>
+              </tr>
             </table>
+          </div>
         </div>
       </body>
-    </html>
-  `;
+    </html>`;
 
   const blob = Utilities.newBlob(html, MimeType.HTML).getAs(MimeType.PDF).setName(`DefectReport_${targetTask.id}.pdf`);
   const file = folder.createFile(blob);
