@@ -193,8 +193,8 @@ function initSheets() {
     'TASK': ['TaskID', 'JobID', 'Scope', 'Building', 'Unit', 'Status', 'CustomerName', 'TargetFixDate', 'ActualStartDate', 'ActualEndDate', 'Duration', 'Remark', 'Timestamp'],
     'DEFECT': [
       'DefectID', 'TaskID', 'TargetStartDate', 'TargetEndDate', 'Status', 'MainCategory', 
-      'SubCategory', 'Description', 'Major', 'Team', 'ImgUnit', 'ImgBefore', 'ImgDuring', 'ImgAfter', 'Timestamp', 
-      'VOSteps', 'ActualStartDate', 'ActualEndDate', 'Remark' 
+      'SubCategory', 'Description', 'Major', 'Team', 'Area', 'ImgUnit', 'ImgBefore', 'ImgDuring', 'ImgAfter', 'HistoryLog',
+      'Timestamp', 'VOSteps', 'ActualStartDate', 'ActualEndDate', 'Remark' 
     ],
     // อัปเดต Header ของ Sheet User ให้ตรงกับโครงสร้างใหม่
     'User': ['UserID', 'Password', 'FullName', '', 'Role', 'Position', 'Approved', '', 'Email', 'Line', 'Phone', '', 'Team', 'Timestamp'],
@@ -249,10 +249,12 @@ function getAllData() {
           description: def.Description || def['รายละเอียด'],
           major: def.Major || def['Major'], 
           team: def.Team || def['ทีมเข้าแก้ไข'],
+          area: def.Area || def['บริเวณ'] || '',
           imgUnit: def.ImgUnit || def['รูปภาพเลขยูนิต'], 
           imgBefore: def.ImgBefore || def['รูปภาพก่อนแก้ไข'],
           imgDuring: def.ImgDuring || def['รูปภาพระหว่างแก้ไข'],
           imgAfter: def.ImgAfter || def['รูปภาพหลังแก้ไข'],
+          historyLog: def.HistoryLog || def['HistoryLog'] || '',
           status: def.Status || def['DefectStatus'] || def['สถานะ defect'],
           targetStartDate: def.TargetStartDate || def['วันเข้าแก้ไข'] || def['TargetStartDate'] || '',
           targetEndDate: def.TargetEndDate || def['วันแก้ไขเสร็จสิ้น'] || def['TargetEndDate'] || '',
@@ -464,7 +466,9 @@ function addDefect(taskId, defectData) {
     imgBeforeUrl = uploadBase64(defectData.imgBefore, `Before_${newId}_${ts}`);
   }
 
-  const rowData = new Array(19).fill(''); 
+  const historyLog = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM/yyyy, HH:mm:ss');
+
+  const rowData = new Array(21).fill(''); 
   
   rowData[0] = newId;                        
   rowData[1] = taskId;                       
@@ -476,12 +480,17 @@ function addDefect(taskId, defectData) {
   rowData[7] = defectData.description;       
   rowData[8] = defectData.major;             
   rowData[9] = defectData.team;              
-  rowData[10] = '';                          
-  rowData[11] = imgBeforeUrl;                
-  rowData[12] = '';                          
+  rowData[10] = defectData.area || '';       
+  rowData[11] = '';                          
+  rowData[12] = imgBeforeUrl;                
   rowData[13] = '';                          
-  rowData[14] = new Date();                  
-  rowData[15] = defectData.voSteps || '';    
+  rowData[14] = '';                          
+  rowData[15] = historyLog;                  
+  rowData[16] = new Date();                  
+  rowData[17] = defectData.voSteps || '';    
+  rowData[18] = '';                          
+  rowData[19] = '';                          
+  rowData[20] = '';                          
 
   sheet.appendRow(rowData);
   return newId;
@@ -491,7 +500,7 @@ function updateTask(formData) {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const sheet = ss.getSheetByName('TASK');
   const data = sheet.getDataRange().getValues();
-
+  
   let rowIndex = -1;
   for (let i = 1; i < data.length; i++) {
     if (data[i][0] === formData.id) {
@@ -564,7 +573,8 @@ function updateDefect(defectData) {
   sheet.getRange(rowIndex, 8).setValue(defectData.description || '');
   sheet.getRange(rowIndex, 9).setValue(defectData.major || 'ไม่ใช่');
   sheet.getRange(rowIndex, 10).setValue(teamValue);
-  sheet.getRange(rowIndex, 16).setValue(defectData.voSteps || '');
+  sheet.getRange(rowIndex, 11).setValue(defectData.area || '');
+  sheet.getRange(rowIndex, 18).setValue(defectData.voSteps || '');
 
   SpreadsheetApp.flush();
   return 'Update Success';
@@ -603,7 +613,9 @@ function getMasterData() {
     sites: [], 
     owners: [],
     mainCategories: [],
-    subCategories: {}
+    subCategories: {},
+    subCategoryTeams: {},
+    teams: []
   };
 
   const projectSheet = ss.getSheetByName('Project');
@@ -656,10 +668,20 @@ function getMasterData() {
   if (subDefectSheet) {
     const sLastRow = subDefectSheet.getLastRow();
     if (sLastRow >= 2) {
-      const sData = subDefectSheet.getRange(2, 1, sLastRow - 1, 4).getDisplayValues();
+      const sLastColumn = subDefectSheet.getLastColumn();
+      const sHeaders = subDefectSheet.getRange(1, 1, 1, sLastColumn).getDisplayValues()[0].map(header => String(header || '').trim());
+      const sData = subDefectSheet.getRange(2, 1, sLastRow - 1, sLastColumn).getDisplayValues();
+      const mainCatIndex = sHeaders.findIndex(header => /maincategory/i.test(header));
+      const subCatIndex = sHeaders.findIndex(header => /subcategory/i.test(header));
+      const teamIndex = sHeaders.findIndex(header => /team/i.test(header));
+
       sData.forEach(row => {
-        const mainCat = row[1] ? row[1].toString().trim() : ''; 
-        const subCat = row[3] ? row[3].toString().trim() : '';  
+        const fallbackMain = row[1] ? row[1].toString().trim() : '';
+        const fallbackSub = row[3] ? row[3].toString().trim() : (row[2] ? row[2].toString().trim() : '');
+        const fallbackTeam = row[4] ? row[4].toString().trim() : '';
+        const mainCat = mainCatIndex > -1 && row[mainCatIndex] ? row[mainCatIndex].toString().trim() : fallbackMain;
+        const subCat = row[3] ? row[3].toString().trim() : (subCatIndex > -1 && row[subCatIndex] ? row[subCatIndex].toString().trim() : fallbackSub);
+        const teamValue = row[4] ? row[4].toString().trim() : (teamIndex > -1 && row[teamIndex] ? row[teamIndex].toString().trim() : fallbackTeam);
         
         if (mainCat && subCat) {
           if (!result.subCategories[mainCat]) {
@@ -667,6 +689,15 @@ function getMasterData() {
           }
           if (!result.subCategories[mainCat].includes(subCat)) {
             result.subCategories[mainCat].push(subCat);
+          }
+        }
+
+        if (subCat && teamValue) {
+          if (!result.subCategoryTeams[subCat]) {
+            result.subCategoryTeams[subCat] = [];
+          }
+          if (!result.subCategoryTeams[subCat].includes(teamValue)) {
+            result.subCategoryTeams[subCat].push(teamValue);
           }
         }
       });
@@ -808,7 +839,7 @@ function uploadSingleDefectImage(defectId, field, base64Str) {
     
     const url = "https://drive.google.com/uc?export=view&id=" + file.getId();
     
-    const colMap = { 'imgUnit': 11, 'imgBefore': 12, 'imgDuring': 13, 'imgAfter': 14 };
+    const colMap = { 'imgUnit': 12, 'imgBefore': 13, 'imgDuring': 14, 'imgAfter': 15 };
     if (colMap[field]) {
       sheet.getRange(rowIndex, colMap[field]).setValue(url);
     }
@@ -942,10 +973,12 @@ function getTaskPlanExportData_(jobId, taskIds) {
           description: defect.Description || defect['รายละเอียด'] || '',
           major: defect.Major || defect['Major'] || '',
           team: defect.Team || defect['ทีมเข้าแก้ไข'] || '',
+          area: defect.Area || defect['บริเวณ'] || '',
           imgUnit: defect.ImgUnit || defect['รูปภาพเลขยูนิต'] || '',
           imgBefore: defect.ImgBefore || defect['รูปภาพก่อนแก้ไข'] || '',
           imgDuring: defect.ImgDuring || defect['รูปภาพระหว่างแก้ไข'] || '',
           imgAfter: defect.ImgAfter || defect['รูปภาพหลังแก้ไข'] || '',
+          historyLog: defect.HistoryLog || defect['HistoryLog'] || '',
           timestamp: defect.Timestamp || defect['Timestamp'] || '',
           voSteps: defect.VOSteps || defect['ขั้นตอนการแก้ไข'] || defect['VOSteps'] || '',
           actualStartDate: defect.ActualStartDate || defect['ActualStartDate'] || '',
