@@ -103,6 +103,15 @@
                               'งานระบบไฟฟ้า': ['ตู้ Control', 'ท่อร้อยสาย', 'บล๊อคไฟ/Pool box', 'รางWireWay', 'สาย (G)', 'สาย (L)', 'สาย (N)'],
                               'งานระบบประปา': ['ท่อรั่ว', 'ก๊อกน้ำซึม']
                             },
+                            subCategoryTeams: {
+                              'ก่ออิฐ/ฉาบปูน': ['ทีมช่างสี (Internal)'],
+                              'งานสีรองพื้น': ['ทีมช่างสี (Internal)'],
+                              'ผนังสำเร็จรูป': ['Supplier A (โครงสร้าง)'],
+                              'โครงคร่าว': ['CL', 'ทีมช่างฝ้า', 'ทีมช่างไฟ'],
+                              'ตู้ Control': ['ทีมช่างไฟ (Internal)'],
+                              'ท่อร้อยสาย': ['ทีมช่างไฟ (Internal)'],
+                              'ท่อรั่ว': ['Supplier B (ประปา)', 'ทีมช่างไฟ (Internal)']
+                            },
                             teams: ['ทีมช่างสี (Internal)', 'ทีมช่างไฟ (Internal)', 'Supplier A (โครงสร้าง)', 'Supplier B (ประปา)'] // Mockup Data ทีมเข้าแก้ไข
                         }));
                         else if (p === 'loginUser') t.success({userId: args[0], fullName: 'ผู้ใช้งานระบบ (Mock)', role: 'ADMIN', isAdmin: true});
@@ -1375,6 +1384,7 @@
       
       const [mainCategories, setMainCategories] = useState([]);
       const [subCategoriesMap, setSubCategoriesMap] = useState({});
+      const [subCategoryTeamsMap, setSubCategoryTeamsMap] = useState({});
       const [teams, setTeams] = useState([]); // State สำหรับเก็บข้อมูลทีมที่ดึงจาก Sheet
 
       const [isLoading, setIsLoading] = useState(true);
@@ -1466,6 +1476,7 @@
             setUniqueSites(parsed.sites);
             setMainCategories(parsed.mainCategories || []);
             setSubCategoriesMap(parsed.subCategories || {});
+            setSubCategoryTeamsMap(parsed.subCategoryTeams || {});
             setTeams(parsed.teams || []); // บันทึกข้อมูลทีมที่ได้จาก Sheet Team Col C
           })
           .withFailureHandler(err => console.error('Error fetching master data:', err))
@@ -1613,140 +1624,62 @@
           .withFailureHandler(err => { alert('Error: ' + err.message); setIsSaving(false); }).addDefect(activeTaskId, formData);
       };
 
+      const handleCreateDefects = (defectItems) => {
+        const items = Array.isArray(defectItems) ? defectItems.filter(Boolean) : [];
+        if (items.length === 0) return;
+
+        setIsSaving(true);
+
+        const saveNext = (index) => {
+          if (index >= items.length) {
+            fetchData(true);
+            setShowDefectForm(false);
+            setIsSaving(false);
+            return;
+          }
+
+          google.script.run
+            .withSuccessHandler(() => saveNext(index + 1))
+            .withFailureHandler(err => {
+              alert('Error: ' + err.message);
+              setIsSaving(false);
+            })
+            .addDefect(activeTaskId, items[index]);
+        };
+
+        saveNext(0);
+      };
+
       const handleDeleteDefect = (id, e) => {
         e.stopPropagation();
-        if (window.confirm(`⚠️ คุณต้องการลบรายการ Defect ${id} ใช่หรือไม่?`)) {
+        if (window.confirm(`⚠️ คุณต้องการลบ Defect ${id} ใช่หรือไม่?`)) {
           setIsDeleting(true);
-          google.script.run.withSuccessHandler(() => { fetchData(true); setIsDeleting(false); if (activeDefectId === id) setView('TASK_DETAIL'); })
-            .withFailureHandler(err => { alert('Error: ' + err.message); setIsDeleting(false); }).deleteDefect(id);
-        }
-      };
-
-      const handleUpdateTaskStatus = (id, status) => {
-        if (window.confirm(`⚠️ ยืนยันการเปลี่ยนสถานะเป็น "${status}" ใช่หรือไม่?`)) {
-          setIsSaving(true);
-          google.script.run.withSuccessHandler(() => { fetchData(true); setIsSaving(false); })
-            .withFailureHandler(err => { alert('Error: ' + err.message); setIsSaving(false); }).updateTaskStatusAndJob(id, status);
-        }
-      };
-
-      const handleExportTaskPlans = () => {
-        const pendingTasks = pendingTaskPlanCandidates;
-        if (pendingTasks.length === 0) return alert('ไม่มีใบงานย่อยสถานะรอดำเนินการให้ Export');
-        setSelectedTaskPlanIds(pendingTasks.map(task => task.id));
-        setIsTaskPlanSelectorOpen(true);
-      };
-
-      const handleConfirmExportTaskPlans = () => {
-        if (!activeJobId) return;
-        if (selectedTaskPlanIds.length === 0) return alert('กรุณาเลือกใบงานย่อยอย่างน้อย 1 รายการ');
-        setIsExportingPDF(true);
-        setIsTaskPlanSelectorOpen(false);
-        google.script.run.withSuccessHandler((res) => { setIsExportingPDF(false); setPdfLinks(JSON.parse(res)); })
-          .withFailureHandler((err) => { setIsExportingPDF(false); alert('Error: ' + err.message); }).exportTaskPlansToPDF(activeJobId, selectedTaskPlanIds);
-      };
-
-      const handleExportSingleTaskPlan = (taskId, e) => {
-        e.stopPropagation();
-        setIsExportingPDF(true);
-        google.script.run.withSuccessHandler((res) => { setIsExportingPDF(false); setPdfLinks(JSON.parse(res)); })
-          .withFailureHandler((err) => { setIsExportingPDF(false); alert('Error: ' + err.message); }).exportTaskPlansToPDF(activeJobId, taskId);
-      };
-
-      const handleExportDefectReport = (taskId, e) => {
-        e.stopPropagation();
-        setIsExportingPDF(true); 
-        google.script.run.withSuccessHandler((res) => { setIsExportingPDF(false); setPdfLinks([JSON.parse(res)]); })
-          .withFailureHandler((err) => { setIsExportingPDF(false); alert('Error: ' + err.message); }).exportDefectReportToPDF(taskId);
-      };
-
-      const handleAuthSubmit = (e) => {
-        e.preventDefault();
-        setAuthError('');
-
-        if (authMode === 'REGISTER') {
-          if (!authForm.userId.trim()) {
-            setAuthError('กรุณากรอก User ID');
-            return;
-          }
-          if (!authForm.fullName.trim()) {
-            setAuthError('กรุณากรอกชื่อ - นามสกุล');
-            return;
-          }
-          if (!authForm.roleValue) {
-            setAuthError('กรุณาเลือก Role');
-            return;
-          }
-          if (!authForm.password.trim()) {
-            setAuthError('กรุณากรอก Password');
-            return;
-          }
-          if (!authForm.confirmPassword.trim()) {
-            setAuthError('กรุณากรอก Confirm Password');
-            return;
-          }
-          if (authForm.password !== authForm.confirmPassword) {
-            setAuthError('Password และ Confirm Password ไม่ตรงกัน');
-            return;
-          }
-        } else if (!authForm.userId.trim() || !authForm.password.trim()) {
-          setAuthError('กรุณากรอก User ID และ Password');
-          return;
-        }
-
-        setAuthLoading(true);
-
-        if (authMode === 'LOGIN') {
           google.script.run
-            .withSuccessHandler(user => {
-              try {
-                sessionStorage.setItem('sas_user', JSON.stringify(user));
-                setCurrentUser(user);
-                setProfileForm({
-                  fullName: user.fullName || '',
-                  email: user.email || '',
-                  line: user.line || '',
-                  phone: user.phone || '',
-                  password: '',
-                  confirmPassword: ''
-                });
-                setView(user?.isSupplier && !user?.isAdmin && !user?.isStaff ? 'SUPPLIER_DEFECTS' : 'DASHBOARD');
-              } catch (callbackError) {
-                console.error('Login success handler failed:', callbackError);
-                setAuthError(callbackError?.message || 'เกิดข้อผิดพลาดหลังจากเข้าสู่ระบบ');
-              } finally {
-                setAuthLoading(false);
-              }
+            .withSuccessHandler(() => {
+              fetchData(true);
+              setIsDeleting(false);
+              if (activeDefectId === id) setView('TASK_DETAIL');
             })
             .withFailureHandler(err => {
-              setAuthError(err.message || 'ไม่สามารถเข้าสู่ระบบได้');
-              setAuthLoading(false);
+              alert('Error: ' + err.message);
+              setIsDeleting(false);
             })
-            .loginUser(authForm.userId, authForm.password);
-          return;
+            .deleteDefect(id);
         }
+      };
 
+      const handleUpdateTaskStatus = (taskId, status) => {
+        setIsSaving(true);
         google.script.run
           .withSuccessHandler(() => {
-            setAuthLoading(false);
-            alert('ลงทะเบียนสำเร็จ กรุณารอผู้ดูแลระบบอนุมัติสิทธิ์ก่อนเข้าใช้งาน');
-            setAuthMode('LOGIN');
-            setAuthForm({ userId: authForm.userId, password: '', confirmPassword: '', fullName: '', roleValue: '', email: '', line: '', phone: '' });
+            fetchData(true);
+            setIsSaving(false);
           })
           .withFailureHandler(err => {
-            setAuthError(err.message || 'ไม่สามารถลงทะเบียนได้');
-            setAuthLoading(false);
+            alert('Error: ' + err.message);
+            setIsSaving(false);
           })
-          .registerUser({
-            userId: authForm.userId,
-            password: authForm.password,
-            confirmPassword: authForm.confirmPassword,
-            fullName: authForm.fullName,
-            roleValue: authForm.roleValue,
-            email: authForm.email,
-            line: authForm.line,
-            phone: authForm.phone
-          });
+          .updateTaskStatusAndJob(taskId, status);
       };
 
       const handleSaveProfile = () => {
@@ -1756,31 +1689,91 @@
           .withSuccessHandler(user => {
             sessionStorage.setItem('sas_user', JSON.stringify(user));
             setCurrentUser(user);
-            setProfileForm({
-              fullName: user.fullName || '',
-              email: user.email || '',
-              line: user.line || '',
-              phone: user.phone || '',
-              password: '',
-              confirmPassword: ''
-            });
+            setProfileForm(prev => ({ ...prev, password: '', confirmPassword: '' }));
             setIsSaving(false);
+            alert('บันทึกข้อมูลเรียบร้อยแล้ว');
           })
           .withFailureHandler(err => {
-            alert('เกิดข้อผิดพลาดในการบันทึกข้อมูลโปรไฟล์: ' + err.message);
+            alert('Error: ' + err.message);
             setIsSaving(false);
           })
           .updateUserProfile(currentUser.userId, profileForm);
       };
 
-      const handleDeleteManagedUser = (userId) => {
-        if (!currentUser?.userId) return;
-        if (!window.confirm(`⚠️ คุณต้องการลบผู้ใช้งาน ${userId} ใช่หรือไม่?`)) return;
-        setIsDeleting(true);
+      const handleExportTaskPlans = () => {
+        const pendingTasks = (activeJob?.tasks || []).filter(task => (task.status || 'รอดำเนินการ') === 'รอดำเนินการ');
+        if (pendingTasks.length === 0) {
+          alert('ไม่พบใบงานย่อยสถานะรอดำเนินการสำหรับ Export');
+          return;
+        }
+        setSelectedTaskPlanIds(pendingTasks.map(task => task.id));
+        setIsTaskPlanSelectorOpen(true);
+      };
+
+      const handleConfirmExportTaskPlans = () => {
+        if (!activeJobId) return;
+        if (selectedTaskPlanIds.length === 0) {
+          alert('กรุณาเลือกใบงานย่อยอย่างน้อย 1 รายการ');
+          return;
+        }
+
+        setIsExportingPDF(true);
         google.script.run
-          .withSuccessHandler(() => { fetchManagedUsers(); setIsDeleting(false); })
-          .withFailureHandler(err => { alert('เกิดข้อผิดพลาดในการลบผู้ใช้งาน: ' + err.message); setIsDeleting(false); })
-          .deleteManagedUser(currentUser.userId, userId);
+          .withSuccessHandler(result => {
+            try {
+              const parsed = JSON.parse(result);
+              setPdfLinks(Array.isArray(parsed) ? parsed : []);
+            } catch (error) {
+              setPdfLinks([]);
+            }
+            setIsTaskPlanSelectorOpen(false);
+            setIsExportingPDF(false);
+          })
+          .withFailureHandler(err => {
+            alert('Error: ' + err.message);
+            setIsExportingPDF(false);
+          })
+          .exportTaskPlansToPDF(activeJobId, selectedTaskPlanIds);
+      };
+
+      const handleExportDefectReport = (taskId, e) => {
+        if (e) e.stopPropagation();
+        setIsExportingPDF(true);
+        google.script.run
+          .withSuccessHandler(result => {
+            try {
+              const parsed = JSON.parse(result);
+              setPdfLinks(parsed ? [parsed] : []);
+            } catch (error) {
+              setPdfLinks([]);
+            }
+            setIsExportingPDF(false);
+          })
+          .withFailureHandler(err => {
+            alert('Error: ' + err.message);
+            setIsExportingPDF(false);
+          })
+          .exportDefectReportToPDF(taskId);
+      };
+
+      const handleExportSingleTaskPlan = (taskId, e) => {
+        if (e) e.stopPropagation();
+        setIsExportingPDF(true);
+        google.script.run
+          .withSuccessHandler(result => {
+            try {
+              const parsed = JSON.parse(result);
+              setPdfLinks(Array.isArray(parsed) ? parsed : []);
+            } catch (error) {
+              setPdfLinks([]);
+            }
+            setIsExportingPDF(false);
+          })
+          .withFailureHandler(err => {
+            alert('Error: ' + err.message);
+            setIsExportingPDF(false);
+          })
+          .exportTaskPlansToPDF(activeJobId, [taskId]);
       };
 
       const handleAddManagedUser = (payload) => {
@@ -1790,340 +1783,396 @@
           .withSuccessHandler(() => {
             fetchManagedUsers();
             setIsSaving(false);
-            alert('เพิ่มบัญชีผู้ใช้งานสำเร็จ');
           })
           .withFailureHandler(err => {
-            alert('เกิดข้อผิดพลาดในการเพิ่มข้อมูลผู้ใช้งาน: ' + err.message);
+            alert('Error: ' + err.message);
             setIsSaving(false);
           })
           .addManagedUser(currentUser.userId, payload);
       };
 
-      // --- Modals ---
-      const JobModal = () => {
-        const isEditMode = !!editingJob;
-        
-        const [formData, setFormData] = useState({ 
-          id: editingJob ? editingJob.id : '',
-          site: editingJob ? editingJob.site : (uniqueSites[0] || ''), 
-          owner: editingJob ? editingJob.owner : '', 
-          ownerCompany: editingJob ? editingJob.ownerCompany : '', 
-          staff: editingJob ? editingJob.staff : STAFFS[2], 
-          replyDueDate: editingJob ? editingJob.replyDueDate : '', 
-          remark: editingJob ? editingJob.remark : '' 
-        });
-        
-        useEffect(() => {
-          if (!isEditMode && uniqueSites.length > 0 && formData.site === uniqueSites[0] && formData.owner === '') {
-            const defaultOwners = ownerMaster.filter(m => m.site === uniqueSites[0]);
-            if (defaultOwners.length > 0) setFormData(prev => ({...prev, owner: defaultOwners[0].owner, ownerCompany: defaultOwners[0].ownerCompany}));
-          }
-        }, [uniqueSites, ownerMaster, isEditMode]);
-        
-        const availableOwners = ownerMaster.filter(m => m.site === formData.site);
-        const uniqueOwnersList = [...new Set(availableOwners.map(m => m.owner))];
-        
-        const handleSiteChange = (e) => {
-          const newSite = e.target.value;
-          const filtered = ownerMaster.filter(m => m.site === newSite);
-          setFormData({...formData, site: newSite, owner: filtered[0]?.owner || '', ownerCompany: filtered[0]?.ownerCompany || ''});
-        };
-        const handleOwnerChange = (e) => {
-          const newOwner = e.target.value;
-          const matched = ownerMaster.find(m => m.site === formData.site && m.owner === newOwner);
-          setFormData({...formData, owner: newOwner, ownerCompany: matched ? matched.ownerCompany : ''});
-        };
-        const handleClose = () => { setShowJobForm(false); setEditingJob(null); };
-        const handleSubmit = () => {
-          if (isEditMode) { if (window.confirm('ยืนยันบันทึกการแก้ไข?')) handleUpdateJob(formData); } 
-          else handleCreateJob(formData);
-        };
-
-        return (
-          <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-3xl w-full max-w-xl shadow-2xl overflow-hidden">
-              <div className="bg-gray-50 px-6 py-4 border-b border-white/10 flex justify-between items-center">
-                <h2 className="text-lg font-bold text-gray-800">{isEditMode ? `แก้ไขใบงานหลัก: ${formData.id}` : 'Create New Project'}</h2>
-                <button onClick={handleClose} className="text-gray-400 hover:text-gray-700 bg-white rounded-full p-1 shadow-sm"><Icons.X /></button>
-              </div>
-              <div className="p-6 space-y-4">
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Site Location *</label>
-                  <select className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-xl focus:ring-brand-500 focus:border-brand-500 block p-3 outline-none" value={formData.site} onChange={handleSiteChange}>
-                    {uniqueSites.map(s => <option key={s} value={s}>{s}</option>)}
-                  </select>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Owner *</label>
-                    <select className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-xl focus:ring-brand-500 focus:border-brand-500 block p-3 outline-none" value={formData.owner} onChange={handleOwnerChange}>
-                      {uniqueOwnersList.map(o => <option key={o} value={o}>{o}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Company</label>
-                    <input type="text" className="w-full bg-gray-100 border border-gray-200 rounded-xl p-3 text-sm text-gray-500" value={formData.ownerCompany} readOnly />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Assign Staff *</label>
-                  <select className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-xl focus:ring-brand-500 focus:border-brand-500 block p-3 outline-none" value={formData.staff} onChange={e => setFormData({...formData, staff: e.target.value})}>
-                    {STAFFS.map(s => <option key={s}>{s}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Due Date</label>
-                  <input type="date" className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:border-brand-500 outline-none" value={formData.replyDueDate} onChange={e => setFormData({...formData, replyDueDate: e.target.value})} />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Remark</label>
-                  <textarea className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:border-brand-500 outline-none" rows="2" value={formData.remark} onChange={e => setFormData({...formData, remark: e.target.value})}></textarea>
-                </div>
-              </div>
-              <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-end gap-3">
-                <button onClick={handleClose} className="px-5 py-2.5 rounded-xl text-sm font-bold text-gray-600 hover:bg-gray-200 transition-colors">Cancel</button>
-                <button onClick={handleSubmit} disabled={isSaving} className="px-6 py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-brand-500 to-brand-600 shadow-md shadow-brand-200 hover:-translate-y-0.5 transition-all disabled:opacity-70">
-                  {isSaving ? 'Saving...' : (isEditMode ? 'Update Project' : 'Create Project')}
-                </button>
-              </div>
-            </div>
-          </div>
-        );
+      const handleUpdateManagedUser = (userId, payload) => {
+        if (!currentUser?.userId) return;
+        setIsSaving(true);
+        google.script.run
+          .withSuccessHandler(updatedUser => {
+            const parsedUser = JSON.parse(updatedUser);
+            setManagedUsers(prev => prev.map(user => user.userId === userId ? parsedUser : user));
+            setIsSaving(false);
+          })
+          .withFailureHandler(err => {
+            alert('Error: ' + err.message);
+            setIsSaving(false);
+          })
+          .updateManagedUser(currentUser.userId, { userId, ...payload });
       };
 
-      const TaskModal = () => {
-        const [formData, setFormData] = useState({ scope: 'SAS', building: '', unit: '', customerName: '', targetFixDate: '', remark: '' });
-        return (
-          <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-3xl w-full max-w-xl shadow-2xl overflow-hidden">
-              <div className="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
-                <h2 className="text-lg font-bold text-gray-800">Add Task</h2>
-                <button onClick={() => setShowTaskForm(false)} className="text-gray-400 hover:text-gray-700 bg-white rounded-full p-1 shadow-sm"><Icons.X /></button>
-              </div>
-              <div className="p-6 space-y-4">
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Scope *</label>
-                  <div className="flex gap-4">
-                    <label className="flex-1 flex items-center p-3 border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50">
-                      <input type="radio" className="text-brand-600 w-4 h-4" value="SAS" checked={formData.scope === 'SAS'} onChange={e => setFormData({...formData, scope: e.target.value})} />
-                      <span className="ml-2 text-sm font-semibold">SAS</span>
-                    </label>
-                    <label className="flex-1 flex items-center p-3 border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50">
-                      <input type="radio" className="text-purple-600 w-4 h-4" value="VO" checked={formData.scope === 'VO'} onChange={e => setFormData({...formData, scope: e.target.value})} />
-                      <span className="ml-2 text-sm font-semibold">VO</span>
-                    </label>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Building *</label>
-                    <input type="text" className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm outline-none focus:border-brand-500" value={formData.building} onChange={e => setFormData({...formData, building: e.target.value})} />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Unit *</label>
-                    <input type="text" className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm outline-none focus:border-brand-500" value={formData.unit} onChange={e => setFormData({...formData, unit: e.target.value})} />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Customer Name *</label>
-                  <input type="text" className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm outline-none focus:border-brand-500" value={formData.customerName} onChange={e => setFormData({...formData, customerName: e.target.value})} />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Target Fix Date *</label>
-                  <input type="date" className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm outline-none focus:border-brand-500" value={formData.targetFixDate} onChange={e => setFormData({...formData, targetFixDate: e.target.value})} />
-                </div>
-              </div>
-              <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-end gap-3">
-                <button onClick={() => setShowTaskForm(false)} className="px-5 py-2.5 rounded-xl text-sm font-bold text-gray-600 hover:bg-gray-200 transition-colors">Cancel</button>
-                <button onClick={() => handleCreateTask(formData)} disabled={isSaving} className="px-6 py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-brand-500 to-brand-600 shadow-md shadow-brand-200 hover:-translate-y-0.5 transition-all disabled:opacity-70">
-                  {isSaving ? 'Saving...' : 'Add Task'}
-                </button>
-              </div>
-            </div>
-          </div>
-        );
+      const handleDeleteManagedUser = (targetUserId) => {
+        if (!currentUser?.userId) return;
+        if (!window.confirm(`⚠️ คุณต้องการลบ Account ${targetUserId} ใช่หรือไม่?`)) return;
+        setIsDeleting(true);
+        google.script.run
+          .withSuccessHandler(() => {
+            setManagedUsers(prev => prev.filter(user => user.userId !== targetUserId));
+            setIsDeleting(false);
+          })
+          .withFailureHandler(err => {
+            alert('Error: ' + err.message);
+            setIsDeleting(false);
+          })
+          .deleteManagedUser(currentUser.userId, targetUserId);
+      };
+
+      const handleAuthSubmit = (e) => {
+        e.preventDefault();
+        setAuthLoading(true);
+        setAuthError('');
+
+        if (authMode === 'LOGIN') {
+          google.script.run
+            .withSuccessHandler(user => {
+              sessionStorage.setItem('sas_user', JSON.stringify(user));
+              setCurrentUser(user);
+              setAuthLoading(false);
+            })
+            .withFailureHandler(err => {
+              setAuthError(err.message || 'เข้าสู่ระบบไม่สำเร็จ');
+              setAuthLoading(false);
+            })
+            .loginUser(authForm.userId, authForm.password);
+          return;
+        }
+
+        google.script.run
+          .withSuccessHandler(() => {
+            setAuthMode('LOGIN');
+            setAuthForm({ userId: authForm.userId, password: '', confirmPassword: '', fullName: '', roleValue: '', email: '', line: '', phone: '' });
+            setAuthLoading(false);
+            alert('ลงทะเบียนสำเร็จ กรุณารอการอนุมัติจากผู้ดูแลระบบ');
+          })
+          .withFailureHandler(err => {
+            setAuthError(err.message || 'ลงทะเบียนไม่สำเร็จ');
+            setAuthLoading(false);
+          })
+          .registerUser(authForm);
       };
 
       const DefectModal = () => {
         const isVO = activeTask?.scope === 'VO';
-        
-        // Helper ในการดึง Sub Category โดยอ้างอิงจาก Main Category
+
         const getSubsForCategory = (mainCat) => {
           if (!mainCat || !subCategoriesMap) return [];
           const target = mainCat.trim();
           for (const key in subCategoriesMap) {
-             if (key.trim() === target) return subCategoriesMap[key];
+            if (key.trim() === target) return subCategoriesMap[key];
           }
           return [];
         };
 
-        const defaultMain = mainCategories.length > 0 ? mainCategories[0] : '';
-        const defaultSubList = getSubsForCategory(defaultMain);
-        const defaultSub = defaultSubList.length > 0 ? defaultSubList[0] : '';
+        const getTeamsForSubCategory = (subCat) => {
+          if (!subCat || !subCategoryTeamsMap) return teams || [];
+          const target = subCat.trim();
+          for (const key in subCategoryTeamsMap) {
+            if (key.trim() === target) {
+              const mappedTeams = Array.isArray(subCategoryTeamsMap[key]) ? subCategoryTeamsMap[key].filter(Boolean) : [];
+              return mappedTeams.length > 0 ? mappedTeams : (teams || []);
+            }
+          }
+          return teams || [];
+        };
 
-        const [formData, setFormData] = useState({ 
-          mainCategory: defaultMain, 
-          subCategory: defaultSub, 
-          description: '', 
-          major: 'ไม่ใช่', 
-          team: teams.length > 0 ? teams[0] : '', 
-          voSteps: '', 
-          imgBefore: '',
-          targetStartDate: '',
-          targetEndDate: ''
-        });
+        const createEmptyDefectDraft = (mainOverride, subOverride) => {
+          const initialMain = mainOverride || (mainCategories.length > 0 ? mainCategories[0] : '');
+          const initialSubList = getSubsForCategory(initialMain);
+          const initialSub = typeof subOverride === 'string' ? subOverride : (initialSubList.length > 0 ? initialSubList[0] : '');
+          const initialTeams = getTeamsForSubCategory(initialSub);
+
+          return {
+            mainCategory: initialMain,
+            subCategory: initialSub,
+            area: '',
+            description: '',
+            major: 'ไม่ใช่',
+            team: initialTeams.length > 0 ? initialTeams[0] : (teams.length > 0 ? teams[0] : ''),
+            voSteps: '',
+            imgBefore: '',
+            targetStartDate: '',
+            targetEndDate: ''
+          };
+        };
+
+        const [formData, setFormData] = useState(() => createEmptyDefectDraft());
+        const [queuedDefects, setQueuedDefects] = useState([]);
+        const availableTeams = getTeamsForSubCategory(formData.subCategory);
+        const isCurrentFormValid = formData.mainCategory && formData.subCategory && formData.team && formData.targetStartDate && formData.description.trim() && (!isVO || formData.voSteps.trim());
 
         useEffect(() => {
           if (!formData.mainCategory && mainCategories.length > 0) {
-             const initialMain = mainCategories[0];
-             const initialSubList = getSubsForCategory(initialMain);
-             setFormData(prev => ({
-               ...prev, 
-               mainCategory: initialMain, 
-               subCategory: initialSubList.length > 0 ? initialSubList[0] : '',
-               team: prev.team || (teams.length > 0 ? teams[0] : '')
-             }));
-          } else if (!formData.team && teams.length > 0) {
-             setFormData(prev => ({ ...prev, team: teams[0] }));
+            setFormData(createEmptyDefectDraft(mainCategories[0]));
+            return;
           }
-        }, [mainCategories, subCategoriesMap, teams]);
-        
+
+          if ((!formData.team || !availableTeams.includes(formData.team)) && availableTeams.length > 0) {
+            setFormData(prev => ({ ...prev, team: availableTeams[0] }));
+          }
+        }, [mainCategories, subCategoriesMap, subCategoryTeamsMap, teams, formData.mainCategory, formData.subCategory, formData.team]);
+
         const handleMainCatChange = (e) => {
           const main = e.target.value;
           const subs = getSubsForCategory(main);
-          setFormData({
-            ...formData, 
-            mainCategory: main, 
-            subCategory: subs.length > 0 ? subs[0] : ''
-          });
+          const nextSub = subs.length > 0 ? subs[0] : '';
+          const nextTeams = getTeamsForSubCategory(nextSub);
+          setFormData(prev => ({
+            ...prev,
+            mainCategory: main,
+            subCategory: nextSub,
+            team: nextTeams.length > 0 ? nextTeams[0] : (teams.length > 0 ? teams[0] : '')
+          }));
+        };
+
+        const handleSubCatChange = (e) => {
+          const subCategory = e.target.value;
+          const nextTeams = getTeamsForSubCategory(subCategory);
+          setFormData(prev => ({
+            ...prev,
+            subCategory,
+            team: nextTeams.includes(prev.team) ? prev.team : (nextTeams.length > 0 ? nextTeams[0] : '')
+          }));
         };
 
         const handleDateChange = (e) => {
           const startDateStr = e.target.value;
           if (!startDateStr) {
-            setFormData({...formData, targetStartDate: '', targetEndDate: ''});
+            setFormData(prev => ({ ...prev, targetStartDate: '', targetEndDate: '' }));
             return;
           }
-          
+
           const startDate = new Date(startDateStr);
-          startDate.setDate(startDate.getDate() + 14); // บวกเพิ่ม 14 วัน
-          
+          startDate.setDate(startDate.getDate() + 14);
           const year = startDate.getFullYear();
           const month = String(startDate.getMonth() + 1).padStart(2, '0');
           const day = String(startDate.getDate()).padStart(2, '0');
-          const endDateStr = `${year}-${month}-${day}`;
-          
-          setFormData({...formData, targetStartDate: startDateStr, targetEndDate: endDateStr});
+
+          setFormData(prev => ({
+            ...prev,
+            targetStartDate: startDateStr,
+            targetEndDate: `${year}-${month}-${day}`
+          }));
+        };
+
+        const validateDraft = (item) => {
+          if (!item.targetStartDate) return 'กรุณาระบุ วันเข้าแก้ไข';
+          if (!item.description.trim()) return 'กรุณากรอกรายละเอียด Description';
+          if (!item.subCategory) return 'กรุณาเลือก Sub Category';
+          if (!item.team) return 'กรุณาเลือก Team';
+          if (isVO && !item.voSteps.trim()) return 'กรุณาระบุ ขั้นตอนการแก้ไข (สำหรับงาน VO)';
+          return '';
+        };
+
+        const handleAddDefectItem = () => {
+          const validationMessage = validateDraft(formData);
+          if (validationMessage) return alert(validationMessage);
+
+          setQueuedDefects(prev => [...prev, { ...formData }]);
+          setFormData(createEmptyDefectDraft(formData.mainCategory, formData.subCategory));
+        };
+
+        const handleRemoveQueuedDefect = (index) => {
+          setQueuedDefects(prev => prev.filter((_, itemIndex) => itemIndex !== index));
+        };
+
+        const handleEditQueuedDefect = (index) => {
+          const item = queuedDefects[index];
+          if (!item) return;
+          setFormData({ ...item });
+          setQueuedDefects(prev => prev.filter((_, itemIndex) => itemIndex !== index));
         };
 
         const handleSave = () => {
-          if (!formData.targetStartDate) return alert('กรุณาระบุ วันเข้าแก้ไข');
-          if (!formData.description.trim()) return alert('กรุณากรอกรายละเอียด Description');
-          if (!formData.subCategory) return alert('กรุณาเลือก Sub Category');
-          if (isVO && !formData.voSteps.trim()) return alert('กรุณาระบุ ขั้นตอนการแก้ไข (สำหรับงาน VO)');
-          
-          handleCreateDefect(formData);
+          const itemsToSave = queuedDefects.length > 0
+            ? [...queuedDefects, ...(isCurrentFormValid ? [{ ...formData }] : [])]
+            : [{ ...formData }];
+
+          if (itemsToSave.length === 0) return alert('กรุณาเพิ่มรายการ Defect อย่างน้อย 1 รายการ');
+
+          const validationMessage = itemsToSave.map(validateDraft).find(Boolean);
+          if (validationMessage) return alert(validationMessage);
+
+          if (itemsToSave.length === 1) {
+            handleCreateDefect(itemsToSave[0]);
+            return;
+          }
+
+          handleCreateDefects(itemsToSave);
         };
-        
-        // เช็คว่ากรอกครบทุกช่องที่บังคับแล้วหรือยัง เพื่อปลดล็อคปุ่ม Save
-        const isFormValid = formData.mainCategory && formData.subCategory && formData.team && formData.targetStartDate && formData.description.trim() && (!isVO || formData.voSteps.trim());
-        
+
+        const isFormValid = queuedDefects.length > 0 || isCurrentFormValid;
+
         return (
-          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-3xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[90vh]">
-              {/* Header */}
-              <div className="px-6 py-4 flex justify-between items-center border-b border-white/10 shrink-0">
-                <h2 className="text-xl font-bold text-gray-800">{isVO ? 'เพิ่ม Defect (VO)' : 'เพิ่ม Defect'}</h2>
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-3 md:p-4">
+            <div className="bg-white rounded-3xl w-full max-w-5xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
+              <div className="px-4 md:px-6 py-4 flex justify-between items-center border-b border-white/10 shrink-0">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-800">{isVO ? 'เพิ่ม Defect (VO)' : 'เพิ่ม Defect'}</h2>
+                  <p className="text-xs text-gray-500 mt-1">เพิ่มได้หลายรายการ แล้วค่อยกด Save Defect ครั้งเดียว</p>
+                </div>
                 <button onClick={() => setShowDefectForm(false)} className="text-gray-400 hover:text-gray-600 bg-white rounded-full p-1.5 shadow-sm"><Icons.X /></button>
               </div>
-              {/* Body */}
-              <div className="p-6 overflow-y-auto space-y-5">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">CATEGORY *</label>
-                    <select className="block w-full rounded-md border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 text-sm py-2.5 px-3 border outline-none" value={formData.mainCategory} onChange={handleMainCatChange} required>
-                      {mainCategories.length > 0 ? mainCategories.map(c => <option key={c} value={c}>{c}</option>) : <option value="">- ไม่มีข้อมูล -</option>}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">SUB CATEGORY *</label>
-                    <select className="block w-full rounded-md border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 text-sm py-2.5 px-3 border outline-none" value={formData.subCategory} onChange={e => setFormData({...formData, subCategory: e.target.value})} required>
-                      {getSubsForCategory(formData.mainCategory).length > 0 ? (
-                        getSubsForCategory(formData.mainCategory).map(c => <option key={c} value={c}>{c}</option>)
-                      ) : (
-                        <option value="" disabled>- ไม่พบข้อมูลหมวดหมู่รอง -</option>
-                      )}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">TEAM *</label>
-                    <select className="block w-full rounded-md border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 text-sm py-2.5 px-3 border outline-none" value={formData.team} onChange={e => setFormData({...formData, team: e.target.value})} required>
-                      {teams.length > 0 ? teams.map(t => <option key={t} value={t}>{t}</option>) : <option value="">- ไม่มีข้อมูลทีม -</option>}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">MAJOR ISSUE? *</label>
-                    <select className="block w-full rounded-md border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 text-sm py-2.5 px-3 border outline-none" value={formData.major} onChange={e => setFormData({...formData, major: e.target.value})} required>
-                      <option value="ไม่ใช่">ไม่ใช่</option>
-                      <option value="ใช่">ใช่</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">วันเข้าแก้ไข *</label>
-                    <input type="date" className="block w-full rounded-md border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 text-sm py-2 px-3 border outline-none" value={formData.targetStartDate} onChange={handleDateChange} required />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">วันแก้ไขเสร็จสิ้น *</label>
-                    <input type="date" className="block w-full rounded-md border-gray-200 bg-gray-50 text-gray-500 shadow-sm text-sm py-2 px-3 border outline-none cursor-not-allowed" value={formData.targetEndDate} readOnly />
-                  </div>
-                </div>
-                
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">DESCRIPTION *</label>
-                  <textarea className="block w-full rounded-md border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 text-sm py-3 px-3 border outline-none" rows="4" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} required></textarea>
-                </div>
 
-                {/* Upload Area */}
-                <div className="border border-gray-200 rounded-xl p-4 bg-gray-50/30">
-                   <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">UPLOAD INITIAL PHOTO (OPTIONAL)</label>
-                   <div className="flex items-center gap-4">
-                      {formData.imgBefore ? (
-                         <div className="relative w-full h-40 md:h-48 border border-gray-200 rounded-xl overflow-hidden shadow-sm">
-                            <img src={formData.imgBefore} alt="Preview" className="w-full h-full object-cover" />
-                            <button onClick={(e) => { e.stopPropagation(); setFormData({...formData, imgBefore: ''}); }} className="absolute top-2 left-2 bg-white/90 text-red-500 p-2 rounded-full shadow hover:bg-red-50 transition-colors">
-                               <Icons.Trash className="w-4 h-4" />
-                            </button>
-                         </div>
-                      ) : (
-                        <div className="relative w-full h-40 md:h-48 border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center text-gray-400 bg-white hover:bg-brand-50 hover:border-brand-300 transition-colors cursor-pointer" onClick={() => document.getElementById('add-defect-img').click()}>
-                          <Icons.File className="w-8 h-8 mb-2 opacity-50" />
-                          <span className="text-sm font-semibold">แตะเพื่อเลือกรูปภาพ</span>
-                          <input id="add-defect-img" type="file" accept="image/*" className="hidden" onChange={(e) => {
-                               const file = e.target.files[0];
-                               if (file) { const reader = new FileReader(); reader.onloadend = () => setFormData(prev => ({...prev, imgBefore: reader.result})); reader.readAsDataURL(file); }
-                               e.target.value = null; // Reset input
-                            }} />
+              <div className="p-4 md:p-6 overflow-y-auto">
+                <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.85fr)] gap-5 md:gap-6">
+                  <div className="space-y-5">
+                    <div className="rounded-2xl border border-gray-200 bg-white p-4 md:p-5 shadow-sm space-y-5">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <div>
+                          <h3 className="text-base font-bold text-gray-900">กรอกข้อมูล Defect</h3>
+                          <p className="text-xs text-gray-500 mt-1">รองรับ mobile, tablet และ desktop</p>
+                        </div>
+                        <button onClick={handleAddDefectItem} type="button" className="inline-flex items-center justify-center rounded-xl bg-brand-50 text-brand-700 px-4 py-2.5 text-sm font-bold hover:bg-brand-100 transition-colors border border-brand-100">
+                          <Icons.Plus />
+                          <span className="ml-2">เพิ่มรายการ Defect</span>
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div>
+                          <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">CATEGORY *</label>
+                          <select className="block w-full rounded-md border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 text-sm py-2.5 px-3 border outline-none" value={formData.mainCategory} onChange={handleMainCatChange} required>
+                            {mainCategories.length > 0 ? mainCategories.map(c => <option key={c} value={c}>{c}</option>) : <option value="">- ไม่มีข้อมูล -</option>}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">SUB CATEGORY *</label>
+                          <select className="block w-full rounded-md border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 text-sm py-2.5 px-3 border outline-none" value={formData.subCategory} onChange={handleSubCatChange} required>
+                            {getSubsForCategory(formData.mainCategory).length > 0 ? (
+                              getSubsForCategory(formData.mainCategory).map(c => <option key={c} value={c}>{c}</option>)
+                            ) : (
+                              <option value="" disabled>- ไม่พบข้อมูลหมวดหมู่รอง -</option>
+                            )}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">TEAM *</label>
+                          <select className="block w-full rounded-md border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 text-sm py-2.5 px-3 border outline-none" value={formData.team} onChange={e => setFormData(prev => ({...prev, team: e.target.value}))} required>
+                            {availableTeams.length > 0 ? availableTeams.map(t => <option key={t} value={t}>{t}</option>) : <option value="">- ไม่มีข้อมูลทีม -</option>}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">MAJOR ISSUE? *</label>
+                          <select className="block w-full rounded-md border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 text-sm py-2.5 px-3 border outline-none" value={formData.major} onChange={e => setFormData(prev => ({...prev, major: e.target.value}))} required>
+                            <option value="ไม่ใช่">ไม่ใช่</option>
+                            <option value="ใช่">ใช่</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">วันเข้าแก้ไข *</label>
+                          <input type="date" className="block w-full rounded-md border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 text-sm py-2 px-3 border outline-none" value={formData.targetStartDate} onChange={handleDateChange} required />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">วันแก้ไขเสร็จสิ้น *</label>
+                          <input type="date" className="block w-full rounded-md border-gray-200 bg-gray-50 text-gray-500 shadow-sm text-sm py-2 px-3 border outline-none cursor-not-allowed" value={formData.targetEndDate} readOnly />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">DESCRIPTION *</label>
+                        <textarea className="block w-full rounded-md border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 text-sm py-3 px-3 border outline-none" rows="4" value={formData.description} onChange={e => setFormData(prev => ({...prev, description: e.target.value}))} required></textarea>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">บริเวณ</label>
+                        <input type="text" className="block w-full rounded-md border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 text-sm py-2.5 px-3 border outline-none" value={formData.area || ''} onChange={e => setFormData(prev => ({...prev, area: e.target.value}))} placeholder="ระบุบริเวณ เช่น ห้องนอน, ระเบียง, ห้องน้ำ" />
+                      </div>
+
+                      <div className="border border-gray-200 rounded-xl p-4 bg-gray-50/30">
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">UPLOAD INITIAL PHOTO (OPTIONAL)</label>
+                        <div className="flex items-center gap-4">
+                          {formData.imgBefore ? (
+                            <div className="relative w-full h-40 md:h-48 border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+                              <img src={formData.imgBefore} alt="Preview" className="w-full h-full object-cover" />
+                              <button onClick={(e) => { e.stopPropagation(); setFormData(prev => ({...prev, imgBefore: ''})); }} className="absolute top-2 left-2 bg-white/90 text-red-500 p-2 rounded-full shadow hover:bg-red-50 transition-colors">
+                                <Icons.Trash className="w-4 h-4" />
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="relative w-full h-40 md:h-48 border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center text-gray-400 bg-white hover:bg-brand-50 transition-colors cursor-pointer" onClick={() => document.getElementById('add-defect-img').click()}>
+                              <Icons.File className="w-8 h-8 mb-2 opacity-50" />
+                              <span className="text-sm font-semibold">แตะเพื่อเลือกรูปภาพ</span>
+                              <input id="add-defect-img" type="file" accept="image/*" className="hidden" onChange={(e) => {
+                                const file = e.target.files[0];
+                                if (file) {
+                                  const reader = new FileReader();
+                                  reader.onloadend = () => setFormData(prev => ({ ...prev, imgBefore: reader.result }));
+                                  reader.readAsDataURL(file);
+                                }
+                                e.target.value = null;
+                              }} />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {isVO && (
+                        <div className="bg-purple-50 p-4 rounded-xl border border-purple-100 mt-2">
+                          <label className="block text-xs font-bold text-purple-800 uppercase tracking-wide mb-1.5">ขั้นตอนการแก้ไข (เฉพาะงาน VO) *</label>
+                          <textarea className="block w-full rounded-md border-purple-200 shadow-sm focus:border-purple-500 focus:ring-purple-500 text-sm py-2 px-3 border outline-none" rows="2" placeholder="ระบุขั้นตอนการทำงานเพื่อประเมิน BOQ..." value={formData.voSteps} onChange={e => setFormData(prev => ({...prev, voSteps: e.target.value}))} required></textarea>
                         </div>
                       )}
-                   </div>
-                </div>
-                
-                {isVO && (
-                  <div className="bg-purple-50 p-4 rounded-xl border border-purple-100 mt-2">
-                    <label className="block text-xs font-bold text-purple-800 uppercase tracking-wide mb-1.5">ขั้นตอนการแก้ไข (เฉพาะงาน VO) *</label>
-                    <textarea className="block w-full rounded-md border-purple-200 shadow-sm focus:border-purple-500 focus:ring-purple-500 text-sm py-2 px-3 border outline-none" rows="2" placeholder="ระบุขั้นตอนการทำงานเพื่อประเมิน BOQ..." value={formData.voSteps} onChange={e => setFormData({...formData, voSteps: e.target.value})} required></textarea>
+                    </div>
                   </div>
-                )}
+
+                  <div className="space-y-4">
+                    <div className="rounded-2xl border border-gray-200 bg-gray-50/70 p-4">
+                      <div className="flex items-center justify-between gap-3 mb-3">
+                        <div>
+                          <h3 className="text-base font-bold text-gray-900">รายการที่เตรียมบันทึก</h3>
+                          <p className="text-xs text-gray-500 mt-1">กดบันทึกทั้งหมดครั้งเดียว</p>
+                        </div>
+                        <span className="inline-flex items-center rounded-full bg-white border border-gray-200 px-3 py-1 text-xs font-bold text-gray-700">{queuedDefects.length} รายการ</span>
+                      </div>
+
+                      <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-1">
+                        {queuedDefects.length > 0 ? queuedDefects.map((item, index) => (
+                          <div key={`${item.subCategory}-${item.team}-${index}`} className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <div className="text-sm font-bold text-gray-900 break-words">{item.subCategory || '-'}</div>
+                                <div className="text-xs text-gray-500 mt-1">{item.mainCategory || '-'} • {item.team || '-'} • {item.major || '-'}</div>
+                                <div className="text-xs text-gray-500 mt-1">บริเวณ: {item.area || '-'}</div>
+                                <div className="text-xs text-gray-500 mt-1">เข้าแก้ไข: {item.targetStartDate || '-'} / เสร็จสิ้น: {item.targetEndDate || '-'}</div>
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <button type="button" onClick={() => handleEditQueuedDefect(index)} className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-bold text-gray-700 hover:bg-gray-50 transition-colors">แก้ไข</button>
+                                <button type="button" onClick={() => handleRemoveQueuedDefect(index)} className="rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-xs font-bold text-red-600 hover:bg-red-100 transition-colors">ลบ</button>
+                              </div>
+                            </div>
+                            <div className="mt-3 text-xs text-gray-600 break-words">{item.description || '-'}</div>
+                          </div>
+                        )) : (
+                          <div className="rounded-2xl border border-dashed border-gray-300 bg-white/80 p-5 text-center text-sm text-gray-500">
+                            ยังไม่มีรายการในคิว
+                            <div className="text-xs text-gray-400 mt-1">กรอกข้อมูลด้านซ้ายแล้วกด “เพิ่มรายการ Defect”</div>
+                          </div>
+                        )}
+
+                        {isCurrentFormValid && (
+                          <div className="rounded-2xl border border-brand-200 bg-brand-50/70 p-4">
+                            <div className="text-xs font-bold uppercase tracking-wide text-brand-700">รายการปัจจุบันที่ยังไม่ได้เพิ่มเข้าคิว</div>
+                            <div className="text-sm font-bold text-gray-900 mt-2">{formData.subCategory || '-'}</div>
+                            <div className="text-xs text-gray-600 mt-1">{formData.team || '-'} • {formData.targetStartDate || '-'}</div>
+                            <div className="text-xs text-gray-600 mt-1">บริเวณ: {formData.area || '-'}</div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              {/* Footer */}
-              <div className="px-6 py-4 border-t border-gray-100 flex justify-end items-center gap-4 shrink-0 bg-gray-50/50 rounded-b-2xl">
+              <div className="px-4 md:px-6 py-4 border-t border-gray-100 flex justify-end items-center gap-4 shrink-0 bg-gray-50/50 rounded-b-2xl">
                 <button onClick={() => setShowDefectForm(false)} className="text-sm font-bold text-gray-600 hover:text-gray-900 transition-colors">Cancel</button>
-                <button 
-                  onClick={handleSave} 
-                  disabled={isSaving || !isFormValid} 
-                  className={`px-6 py-2.5 rounded-lg text-sm font-bold text-white transition-all ${(isSaving || !isFormValid) ? 'bg-gray-400 opacity-70 cursor-not-allowed' : 'bg-brand-500 hover:bg-brand-600 shadow-md shadow-brand-200 hover:-translate-y-0.5'}`}>
-                  {isSaving ? 'Saving...' : 'Save Defect'}
+                <button onClick={handleSave} disabled={isSaving || !isFormValid} className={`px-6 py-2.5 rounded-lg text-sm font-bold text-white transition-all ${(isSaving || !isFormValid) ? 'bg-gray-400 opacity-70 cursor-not-allowed' : 'bg-brand-500 hover:bg-brand-600 shadow-md shadow-brand-200 hover:-translate-y-0.5'}`}>
+                  {isSaving ? 'Saving...' : `Save Defect${queuedDefects.length > 0 ? ` (${queuedDefects.length + (isCurrentFormValid ? 1 : 0)})` : ''}`}
                 </button>
               </div>
             </div>
@@ -2131,7 +2180,6 @@
         );
       };
 
-      // --- Main Views ---
       const Sidebar = ({ onLogout, isOpen, onToggle }) => (
         <React.Fragment>
           {/* Mobile Overlay */}
@@ -2439,7 +2487,7 @@
                       })}
                     </div>
 
-                    <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div className="mt-4 grid grid-cols-3 gap-3">
                       <div className="rounded-2xl bg-white border border-slate-200 px-4 py-3 flex items-center gap-3">
                         <span className="w-3 h-3 rounded-full bg-cyan-500"></span>
                         <div>
@@ -2465,14 +2513,11 @@
 
                 <div className="space-y-6">
                   <div className="bg-white rounded-[30px] border border-gray-100 shadow-sm p-5 md:p-6">
-                    <div className="flex items-start justify-between gap-4 mb-4">
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between mb-5">
                       <div>
-                        <h3 className="text-lg font-extrabold text-gray-900">Today & Next Agenda</h3>
-                        <p className="text-sm text-gray-500 mt-1">ช่วย manager เห็นงานที่ต้องเข้า site วันนี้และงานต่อเนื่องถัดไป</p>
-                      </div>
-                      <div className="rounded-2xl bg-slate-50 px-3 py-2 text-right">
-                        <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">Today</div>
-                        <div className="text-sm font-bold text-slate-900 mt-1">{formatDashboardDate(today)}</div>
+                        <div className="inline-flex items-center rounded-full bg-brand-50 px-3 py-1 text-xs font-bold text-brand-700">Today & Next Agenda</div>
+                        <h3 className="text-lg font-extrabold text-gray-900 mt-3">ช่วย manager เห็นงานที่ต้องเข้า site วันนี้และงานต่อเนื่องถัดไป</h3>
+                        <p className="text-sm text-gray-500 mt-2">จุดสีฟ้า = วันเข้าแก้ไข และจุดสีเขียว = วันแก้ไขเสร็จสิ้น เพื่อให้ผู้จัดการ monitor แผนงานและการกระจายภาระงานได้ในหน้าเดียว</p>
                       </div>
                     </div>
 
@@ -2495,7 +2540,7 @@
                                 <StatusBadge status={event.status} size="sm" />
                                 {event.major === 'ใช่' && <span className="bg-rose-50 text-rose-700 text-[10px] font-bold px-2 py-1 rounded border border-rose-200">MAJOR</span>}
                               </div>
-                              <div className="font-bold text-gray-900 truncate">{event.description || '-'}</div>
+                              <div className="font-bold text-gray-900 leading-snug">{event.description || '-'}</div>
                               <div className="text-sm text-gray-500 mt-1">{event.site} • อาคาร {event.building || '-'} / Unit {event.unit || '-'}</div>
                               <div className="text-xs text-gray-400 mt-1">ทีม: {event.team} • ลูกค้า: {event.customerName}</div>
                             </div>
@@ -2511,10 +2556,11 @@
                   </div>
 
                   <div className="bg-white rounded-[30px] border border-gray-100 shadow-sm p-5 md:p-6">
-                    <div className="flex items-start justify-between gap-4 mb-4">
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between mb-5">
                       <div>
-                        <h3 className="text-lg font-extrabold text-gray-900">BA Planning Insights</h3>
-                        <p className="text-sm text-gray-500 mt-1">มุมมองเชิงวิเคราะห์เพื่อดู workload concentration และ capacity ของทีมในเดือนนี้</p>
+                        <div className="inline-flex items-center rounded-full bg-brand-50 px-3 py-1 text-xs font-bold text-brand-700">BA Planning Insights</div>
+                        <h3 className="text-lg font-extrabold text-gray-900 mt-3">มุมมองเชิงวิเคราะห์เพื่อดู workload concentration และ capacity ของทีมในเดือนนี้</h3>
+                        <p className="text-sm text-gray-500 mt-2">จุดสีฟ้า = วันเข้าแก้ไข และจุดสีเขียว = วันแก้ไขเสร็จสิ้น เพื่อให้ผู้จัดการ monitor แผนงานและการกระจายภาระงานได้ในหน้าเดียว</p>
                       </div>
                     </div>
 
@@ -2671,7 +2717,7 @@
                             {defect.major === 'ใช่' && <span className="bg-rose-50 text-rose-700 text-[10px] font-bold px-2 py-1 rounded border border-rose-200">MAJOR</span>}
                           </div>
                           <div className="font-bold text-gray-900 leading-snug">{defect.description || '-'}</div>
-                          <div className="text-sm text-gray-500 mt-2">{defect.mainCategory} / {defect.subCategory}</div>
+                          <div className="text-sm text-gray-500 mt-1">{defect.mainCategory} / {defect.subCategory}</div>
                           <div className="text-xs text-gray-400 mt-1">ทีม: {defect.team || '-'} • ID: {defect.id}</div>
                         </div>
                       </div>
@@ -2693,6 +2739,15 @@
         const [drafts, setDrafts] = useState({});
         const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
         const [expandedUserId, setExpandedUserId] = useState(null);
+
+        const handleNewUserRoleChange = (roleValue) => {
+          setNewUserForm(prev => ({
+            ...prev,
+            roleValue,
+            position: roleValue === 'Supplier' ? 'Supplier' : 'Staff',
+            team: roleValue === 'Supplier' ? prev.team : ''
+          }));
+        };
 
         const getDraft = (user) => drafts[user.userId] || {
           fullName: user.fullName || '',
